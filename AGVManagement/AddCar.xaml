@@ -1,0 +1,35 @@
+﻿<Window x:Class="AGVManagement.AddCar"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AGVManagement"
+        mc:Ignorable="d"
+        Title="小车设置" Height="400" Width="500" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition></RowDefinition>
+                <RowDefinition></RowDefinition>
+                <RowDefinition></RowDefinition>
+                <RowDefinition></RowDefinition>
+                <RowDefinition></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Label Content="小车编号:" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Row="0" Grid.Column="0"  FontSize="16" Width="80" />
+            <TextBox  Name="CarSizeN" FontSize="16"   Grid.Row="0" Grid.Column="1" VerticalContentAlignment="Center" />
+            <Label Content="小车宽度:" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Row="1" Grid.Column="0"  FontSize="16" Width="80" />
+            <TextBox  Name="CarSizeW" FontSize="16"   Grid.Row="1" Grid.Column="1" VerticalContentAlignment="Center" />
+            <Label Content="小车长度:" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Row="2" Grid.Column="0"  FontSize="16" Width="80" />
+            <TextBox  Name="CarSizeH" FontSize="16"   Grid.Row="2" Grid.Column="1" VerticalContentAlignment="Center" />
+            <Label Content="小车高度:" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Row="3" Grid.Column="0"  FontSize="16" Width="80" />
+            <TextBox  Name="CarSizeL" FontSize="16"   Grid.Row="3" Grid.Column="1" VerticalContentAlignment="Center" />
+            <Button Content="确定" Name="CarSum" Click="CarSum_Click"  FontSize="18" Margin="0,0,-60,0" Grid.Row="4"  Width="100" Height="40" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Center"></Button>
+            <Button Content="取消" Name="OFFCar" Click="OFFCar_Click"
+            Margin="60,0,0,0" FontSize="18" Grid.Row="4"  Width="100" Height="40" Grid.Column="1"></Button>
+        </Grid>
+    </Grid>
+</Window>

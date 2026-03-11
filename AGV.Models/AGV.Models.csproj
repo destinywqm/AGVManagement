@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{94341C6F-93CF-497F-BC1F-B2A01B00387D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>AGV.Models</RootNamespace>
+    <AssemblyName>AGV.Models</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="AGVDLL">
+      <HintPath>..\AGVManagement\bin\x86\Debug\AGVDLL.dll</HintPath>
+    </Reference>
+    <Reference Include="MQTTnet, Version=4.3.1.873, Culture=neutral, PublicKeyToken=fdb7629f2e364a63, processorArchitecture=MSIL">
+      <HintPath>..\packages\MQTTnet.4.3.1.873\lib\net48\MQTTnet.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CommunicationOriginalMessage.cs" />
+    <Compile Include="Config\MqttServerParam.cs" />
+    <Compile Include="Event\ConnectorMessageEventArgs.cs" />
+    <Compile Include="Event\MQTTClientServiceEventArgs.cs" />
+    <Compile Include="Event\MQTTServerManagerEventArgs.cs" />
+    <Compile Include="Help\SCU_MQTTClient_Helper.cs" />
+    <Compile Include="Models\BaseMessage.cs" />
+    <Compile Include="Config\MQTTClientPara.cs" />
+    <Compile Include="Models\MainInfo.cs" />
+    <Compile Include="Models\Map.cs" />
+    <Compile Include="Models\MapRegion.cs" />
+    <Compile Include="Models\MapTag.cs" />
+    <Compile Include="Models\Report\CarrierNormalStatusReport.cs" />
+    <Compile Include="Models\Report\CarrierShutdownReport.cs" />
+    <Compile Include="Models\Report\CarrierStartupReport.cs" />
+    <Compile Include="Models\Report\CarrierTaskStatusReport.cs" />
+    <Compile Include="Models\Report\DispatchLastwillReport.cs" />
+    <Compile Include="Models\Report\DispatchStartupReport.cs" />
+    <Compile Include="Models\Request\CarrierHeartbeatRequest.cs" />
+    <Compile Include="Models\Request\CarrierReplyApplyLineRequest.cs" />
+    <Compile Include="Models\Request\CarrierReplyUpLineCompleteRequest.cs" />
+    <Compile Include="Models\Request\DispatchCancelTaskToCarrierRequest.cs" />
+    <Compile Include="Models\Request\DispatchClearTaskToCarrierRequest.cs" />
+    <Compile Include="Models\Request\DispatchContinueTaskToCarrierRequest.cs" />
+    <Compile Include="Models\Request\DispatchRouteDeleteToCarrierRequest.cs" />
+    <Compile Include="Models\Request\DispatchRouteToCarrierRequest.cs" />
+    <Compile Include="Models\Request\DispatchSuspendTaskToCarrierRequest.cs" />
+    <Compile Include="Models\Request\DispatchTaskToCarrierRequest.cs" />
+    <Compile Include="Models\Response\CarrierCancelTaskResponse.cs" />
+    <Compile Include="Models\Response\CarrierClearTaskResponse.cs" />
+    <Compile Include="Models\Response\CarrierContinueTaskResponse.cs" />
+    <Compile Include="Models\Response\CarrierRouteDeleteResponse.cs" />
+    <Compile Include="Models\Response\CarrierRouteResponse.cs" />
+    <Compile Include="Models\Response\CarrierSuspendTaskResponse.cs" />
+    <Compile Include="Models\Response\CarrierTaskResponse.cs" />
+    <Compile Include="Models\Response\DispatchHeartbeatToCarrierResponse.cs" />
+    <Compile Include="Models\Response\DispatchReplyApplyLineToCarrierResponse.cs" />
+    <Compile Include="Models\Response\DispatchReplyUpLineCompleteToCarrierResponse.cs" />
+    <Compile Include="Models\Response\MapDrawingResponse.cs" />
+    <Compile Include="MQTTEnum\AgvTaskType.cs" />
+    <Compile Include="MQTTEnum\BearloadEnum.cs" />
+    <Compile Include="MQTTEnum\CattierStatus.cs" />
+    <Compile Include="MQTTEnum\MessageTypeEnum.cs" />
+    <Compile Include="MQTTEnum\MessClassEnum.cs" />
+    <Compile Include="Models\PortInfo.cs" />
+    <Compile Include="MQTTEnum\ResultEnum.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Topic\MyTopic.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

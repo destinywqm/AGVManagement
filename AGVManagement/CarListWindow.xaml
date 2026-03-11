@@ -1,0 +1,51 @@
+﻿    <Window x:Class="AGVManagement.CarListWindow"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            Title="车辆模型管理" Height="400" Width="700">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 车辆列表 -->
+            <DataGrid x:Name="VehicleGrid"
+                      Grid.Row="0"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      Margin="0,0,0,10">
+
+                <!-- 行高亮 -->
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Foreground" Value="Black"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="LightSkyBlue"/>
+                                <Setter Property="Foreground" Value="Black"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
+                    <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="100"/>
+                    <DataGridTextColumn Header="类型" Binding="{Binding Type}" Width="100"/>
+                    <DataGridTextColumn Header="长" Binding="{Binding Length}" Width="80"/>
+                    <DataGridTextColumn Header="宽" Binding="{Binding Width}" Width="80"/>
+                    <DataGridTextColumn Header="载重" Binding="{Binding Load}" Width="80"/>
+                    <DataGridTextColumn Header="通讯方式" Binding="{Binding CommMode}" Width="120"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- 底部按钮 -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="BtnAdd" Content="新增车辆" Width="90" Margin="0,0,10,0" Click="BtnAdd_Click"/>
+            <Button x:Name="BtnEdit" Content="编辑车辆" Width="90" Margin="0,0,10,0" Click="BtnEdit_Click"/>
+            <Button x:Name="BtnDelete" Content="删除车辆" Width="90" Click="BtnDelete_Click"/>
+        </StackPanel>
+        </Grid>
+    </Window>

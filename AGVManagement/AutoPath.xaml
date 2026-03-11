@@ -1,0 +1,20 @@
+﻿<Window x:Class="AGVManagement.AutoPath"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AGVManagement"
+        mc:Ignorable="d"
+        Title="自动充电" Height="158" Width="272" ResizeMode="CanMinimize"  WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="17*"/>
+            <ColumnDefinition Width="83*"/>
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="dataAuto" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="31,26,0,0" Width="136" Height="50" Grid.Column="1"/>
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Bottom" Orientation="Horizontal" Grid.ColumnSpan="2" Margin="30,0,0,0">
+            <Button Content="完成" Click="OnCompleteButtonClick" Width="100" Margin="10"/>
+            <Button Content="取消" Click="OnCancelButtonClick" Width="100" Margin="10"/>
+        </StackPanel>
+    </Grid>
+</Window>

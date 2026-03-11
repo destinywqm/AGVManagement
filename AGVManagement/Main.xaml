@@ -1,0 +1,210 @@
+﻿<Window x:Class="AGVManagement.Main"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AGVManagement"
+        mc:Ignorable="d"
+        Title="华胜 AGV" Height="1043" Width="1520"  Icon="Images/调度.png" WindowState="Maximized" MinWidth="800" MinHeight="700">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="45*"/>
+            <ColumnDefinition Width="804*"/>
+            <ColumnDefinition Width="671*"/>
+        </Grid.ColumnDefinitions>
+        <Grid Grid.ColumnSpan="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="35" />
+                <RowDefinition Height="30" />
+                <RowDefinition Height="60*" />
+                <RowDefinition Height="3" />
+                <RowDefinition Height="30*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="8*"></ColumnDefinition>
+                <ColumnDefinition Width="3"></ColumnDefinition>
+                <ColumnDefinition Width="2*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+
+            <Menu Grid.ColumnSpan="3" Name="Menu" FontSize="16" Background="#46CBD9" FontFamily="Microsoft YaHei" Margin="0,0,0,5">
+                <Separator Width="20" />
+                <MenuItem Header="用户"  Height="28" >
+                    <MenuItem.Icon>
+                        <Image Source="/Images/用户.png" />
+                    </MenuItem.Icon>
+                    <MenuItem Header="退出" Click="Close_Click">
+                        <MenuItem.Icon>
+                            <Image Source="/Images/退出.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="用户管理">
+                        <MenuItem.Icon>
+                            <Image Source="/Images/退出.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="启动管理" Click="OpenMap_Click">
+                        <MenuItem.Icon>
+                            <Image Source="/Images/串口.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <MenuItem Header="串口设置" Name="PortDern" Click="PortDern_Click">
+                    <MenuItem.Icon>
+                        <Image Source="/Images/串口.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator Width="10" />
+                <Separator Width="10" />
+                <MenuItem Header="新建地图" Name="Map_Add" Click="Map_Add_Click" >
+                    <MenuItem.Icon>
+                        <Image Source="/Images/添加.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="编辑地图" Name="Map_btn" Click="Map_btn_Click">
+                    <MenuItem.Icon>
+                        <Image Source="/Images/地图.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="编辑线路" Name="Circui" Click="Circui_Click">
+                    <MenuItem.Icon>
+                        <Image Source="/Images/线路.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="编辑信标" Name="beaconCR" Click="BeaconCR_Click">
+                    <MenuItem.Icon>
+                        <Image Source="/Images/信标.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="编辑车辆" Name="CarStation" Click="CarStation_Click">
+                    <MenuItem.Icon>
+                        <Image Source="/Images/机器人.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator Width="10" />
+
+                <Separator Width="10" />
+                <!--<MenuItem Header="历史" />-->
+                <Separator Width="10" />
+                <MenuItem  Header = "关于" />
+            </Menu>
+            <StackPanel Grid.ColumnSpan="3"  Background="#FFE4C4" Orientation="Horizontal" Margin="0,30,0,0" Grid.RowSpan="2">
+                <Button   IsEnabled="False"  FontSize="12"  Name="Open" Click="Btnset_Click" Content="打开AGV" Height="27" Width="90" Style="{DynamicResource btn-success}" Margin="20,0,0,0" />
+                <Label x:Name="SwitchText"  FontSize="12" Content = "AGV状态：关"  Margin="12,0,0,-3" Height="20" />
+                <Button   x:Name="Btnswitch"  FontSize="12" IsEnabled="False" Click="Btnswitch_Click" Content="关闭AGV" Height="27" Width="90" Style="{DynamicResource btn-danger}" Margin="20,0,0,0" />
+                <Label  Content = "地图：" FontSize="12" Height="20" Margin="20,10,0,10" />
+                <ComboBox x:Name="Maplistq"  FontSize="12" FontFamily="宋体" FontWeight="Black" SelectedIndex="0"  Height="27" Width="120" SelectionChanged="Maplist_SelectionChanged" Margin="10,0,0,0"></ComboBox>
+                <!--<Button FontSize="20" Content="调试" Width="80" Height="35" Style="{DynamicResource btn-info}" Margin="50,0,0,0" Click="Button_Click" />
+    <Button FontSize="20" Content="启动" Width="80" Height="35" Style="{DynamicResource btn-info}" Click="Button_Click_now" />
+    <Button FontSize="20" Content="控制" Width="80" Height="35" Style="{DynamicResource btn-info}" Click="Button_Click_control" />
+    <Button FontSize="20" Content="行驶" Width="80" Height="35" Style="{DynamicResource btn-info}" Click="Button_Click_travel" />-->
+                <Label Content="AGV：" FontSize="12" Height="20" Margin="20,10,0,10" />
+                <ComboBox x:Name="AgvSelectComboBox" FontSize="12" Height="27" Width="160" SelectionChanged="AgvSelectComboBox_SelectionChanged" Margin="10,0,0,0" />
+
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="2" Background="#F9F9FC" HorizontalScrollBarVisibility="Auto">
+                <Canvas Name="MapIN"  Background="#F9F9FC"></Canvas >
+            </ScrollViewer>
+
+            <TabControl Grid.Row="2" Grid.Column="2" FontSize="16">
+                <TabItem Header="属性">
+                    <DataGrid x:Name="TabAgvData" ItemsSource="{Binding}" SelectionChanged="TabAgvData_SelectionChanged">
+                    </DataGrid>
+                </TabItem>
+                <TabItem Header="连结信息">
+                    <DataGrid x:Name="TabSerialPortData" ItemsSource="{Binding}">
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="报警状态">
+                    <DataGrid x:Name="TabSystemStatusData"
+                  AutoGenerateColumns="False"
+                  HeadersVisibility="Column"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="True"
+                  ColumnWidth="*">
+
+                        <!-- ✅ 定义列 -->
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="项目" Binding="{Binding 项目}" Width="2*" />
+                            <DataGridTextColumn Header="状态" Binding="{Binding 状态}" Width="*" />
+                        </DataGrid.Columns>
+
+                        <!-- ✅ 根据状态自动着色 -->
+                        <DataGrid.Resources>
+                            <!-- 红色（异常） -->
+                            <Style TargetType="DataGridRow">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding 状态}" Value="异常">
+                                        <Setter Property="Background" Value="#FFFFB3B3"/>
+                                        <!-- 浅红 -->
+                                        <Setter Property="Foreground" Value="DarkRed"/>
+                                    </DataTrigger>
+
+                                    <!-- 绿色（正常） -->
+                                    <DataTrigger Binding="{Binding 状态}" Value="正常">
+                                        <Setter Property="Background" Value="#FFC8FACC"/>
+                                        <!-- 浅绿 -->
+                                        <Setter Property="Foreground" Value="DarkGreen"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.Resources>
+                    </DataGrid>
+                </TabItem>
+            </TabControl>
+            <TabControl FontSize="16" Grid.Row="4"  Grid.ColumnSpan="3">
+                <TabItem Header="运行信息">
+                    <DataGrid x:Name="TabAgvMoveData" Cursor="Hand" ItemsSource="{Binding}" SelectionMode="Single" IsReadOnly="True" MouseLeftButtonUp="TabAgvMoveData_MouseLeftButtonUp">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="状态" Width="0.5*" CanUserReorder="False">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding type}"  Name="CheckBoxDN"  Foreground="Red" Style="{DynamicResource checkbox has-error}" IsChecked="{x:Null}"  IsHitTestVisible="False" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="AGV编号" Binding="{Binding TagName}"  Width="*" Foreground="Black"  FontWeight="Black" FontSize="20" />
+                            <DataGridTextColumn Header="速度"  Binding="{Binding Speed}" Width="*" Foreground="Black" />
+                            <DataGridTextColumn Header="转弯" Binding="{Binding turn}"  Width="*" Foreground="Black" />
+                            <DataGridTextColumn Header="方向" Binding="{Binding Dir}"  Width="*" Foreground="Black" />
+                            <DataGridTextColumn Header="顶升"  Binding="{Binding Hook}"  Width="*" Foreground="Black" />
+                            <DataGridTextColumn Header="RFID"   Binding="{Binding Rfid}" Width="*" Foreground="Black" />
+                            <DataGridTextColumn Header="线路号"  Binding="{Binding Program}"  Width="*" Foreground="Black" />
+                            <DataGridTextColumn Header="步长"   Binding="{Binding Step}" Width="*" Foreground="Black" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="通道信息">
+                    <DataGrid x:Name="TabAgvInfo"
+              AutoGenerateColumns="False"
+              IsReadOnly="True"
+              HeadersVisibility="Column"
+              MouseLeftButtonUp="TabAgvInfo_MouseLeftButtonUp">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="AGV" Binding="{Binding AGV}" Width="*" />
+                            <DataGridTextColumn Header="网络状态" Binding="{Binding 网络状态}" Width="*" />
+                            <DataGridTextColumn Header="运行状态" Binding="{Binding 运行状态}" Width="*" />
+                            <DataGridTextColumn Header="车辆坐标X" Binding="{Binding 车辆坐标X}" Width="*" />
+                            <DataGridTextColumn Header="车辆坐标Y" Binding="{Binding 车辆坐标Y}" Width="*" />
+                            <DataGridTextColumn Header="电压" Binding="{Binding 电压}" Width="*" />
+
+                            <DataGridTextColumn Header="起点" Binding="{Binding 起点}" Width="*" />
+                            <DataGridTextColumn Header="终点" Binding="{Binding 终点}" Width="*" />
+                            <DataGridTextColumn Header="报警" Binding="{Binding 报警}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+                <!--<TabItem Header="通道信息">
+                    <ScrollViewer  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <TextBlock Name="Log" ></TextBlock>
+                    </ScrollViewer>
+                </TabItem>-->
+            </TabControl>
+            <GridSplitter Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"  Background="Gray" Width="3"></GridSplitter>
+            <GridSplitter Grid.Row="3" HorizontalAlignment="Stretch" Grid.ColumnSpan="5" Background="Gray" Height="3"></GridSplitter>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,15 @@
+[2025-10-11 11:25:58.014] [error] [multi_agv_paths.cpp:52] [json.exception.out_of_range.403] key 'SGPoints' not found
+[2025-10-11 13:24:14.747] [debug] [astar.cpp:176] Fail to find path from (2.6,3.3) to (15.6,6.3)
+[2025-10-11 13:26:17.930] [debug] [astar.cpp:176] Fail to find path from (2.6,3.3) to (15.6,6.3)
+[2025-10-11 13:27:34.113] [debug] [astar.cpp:176] Fail to find path from (2.6,3.3) to (15.6,6.3)
+[2025-10-11 13:29:18.586] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.304] cannot use at() with discarded
+[2025-10-11 13:30:49.905] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.304] cannot use at() with discarded
+[2025-10-11 13:31:05.667] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.304] cannot use at() with discarded
+[2025-10-11 13:33:37.524] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.304] cannot use at() with discarded
+[2025-10-11 13:36:24.604] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.304] cannot use at() with discarded
+[2025-10-11 13:55:43.094] [info] [cbs.cpp:371] Init Paths
+[2025-10-11 13:57:17.823] [info] [cbs.cpp:371] Init Paths
+[2025-10-13 09:29:29.854] [info] [cbs.cpp:371] Init Paths
+[2025-10-13 15:28:48.965] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.302] type must be string, but is number
+[2025-11-20 09:36:52.242] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.302] type must be string, but is null
+[2025-11-20 09:36:57.291] [error] [multi_agv_paths.cpp:52] [json.exception.type_error.302] type must be string, but is null

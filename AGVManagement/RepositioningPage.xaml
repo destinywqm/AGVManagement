@@ -1,0 +1,40 @@
+﻿<Window x:Class="AGVManagement.RepositioningPage"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AGVManagement"
+        mc:Ignorable="d"
+        Title="重定位响应点" Height="237" Width="300" ResizeMode="CanMinimize"  WindowStartupLocation="CenterScreen">
+    <Grid>
+        <!-- 定义3行 -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 第一行：X -->
+        <Label Content="X:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10"/>
+        <TextBox x:Name="dataMes1" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" Width="170" Height="30" TextChanged="dataMes_TextChanged"/>
+
+        <!-- 第二行：Y -->
+        <Label Content="Y:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10"/>
+        <TextBox x:Name="dataMes2" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" Width="170" Height="30" TextChanged="dataMes_TextChanged"/>
+
+        <!-- 第三行：Angle -->
+        <Label Content="Angle:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10"/>
+        <TextBox x:Name="dataMes3" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" Width="170" Height="30" TextChanged="dataMes_TextChanged"/>
+
+        <!-- 调整按钮位置 -->
+        <StackPanel Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Left" VerticalAlignment="Bottom" Orientation="Horizontal" Margin="30,10,0,0">
+            <Button Content="完成" Click="OnCompleteButtonClick" Width="100" Margin="10"/>
+            <Button Content="取消" Click="OnCancelButtonClick" Width="100" Margin="10"/>
+        </StackPanel>
+    </Grid>
+</Window>
