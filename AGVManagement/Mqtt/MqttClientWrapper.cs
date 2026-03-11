@@ -16,7 +16,6 @@ using System.Net;
 using AGVManagement.MapPaint;
 using System.Net.Http;
 using System.Windows.Markup;
-using System.Text.RegularExpressions;
 
 namespace AGVManagement.Mqtt
 {
@@ -128,79 +127,12 @@ namespace AGVManagement.Mqtt
                 {
                     if (topic == "AGV/Response/SOC")
                     {
-                        // 使用正则表达式提取数字部分
-                        var match = Regex.Match(payload, @"\d+");
-                        if (match.Success)
-                        {
-                            // 如果匹配成功，提取并更新电压信息
-                            string voltage = match.Value; // 获取提取的数字部分
-                            GlobalData.UpdateAgvInfo("电压", $"{voltage}%");
-                            GlobalDisplayData.UpdateDisplayInfo(_address, "电压", $"{voltage}%");
-                        }
-                        else
-                        {
-                            // 如果没有找到数字，处理错误或默认行为
-                            GlobalData.UpdateAgvInfo("电压", "未知");
-                            GlobalDisplayData.UpdateDisplayInfo(_address, "电压", "未知");
-                        }
+                        MqttMessageProcessingService.HandleSocMessage(_address, payload);
                     }
 
-                    if (topic == "AGV/Response/AssignmentState" )
+                    if (topic == "AGV/Response/AssignmentState")
                     {
-                        // 使用正则表达式提取数字部分
-                        var match = Regex.Match(payload, @"\d+");
-                        if (match.Success)
-                        {
-                            // 获取提取的数字部分
-                            int stateValue = int.Parse(match.Value);
-
-                            // 根据数字值设置不同的运行状态
-                            string status;
-                            if (stateValue == 97)
-                            {
-                                status = "进行中";   // 97 表示进行中
-                            }
-                            else if (stateValue == 32)
-                            {
-                                status = "无任务";   // 32 表示无任务
-                            }
-                            else if (stateValue == 122)
-                            {
-                                status = "已完成";  // 122 表示已完成
-
-                                // 向 "AGV/Response/TaskDone" 话题发布消息 "已接收"
-                                var client = MqttConnectionManager.LatestClient;
-                                if (client != null && client.IsConnected)
-                                {
-                                    var message = new MqttApplicationMessageBuilder()
-                                        .WithTopic("AGV/Response/TaskDone")
-                                        .WithPayload("已接收")
-                                        .WithExactlyOnceQoS()
-                                        .WithRetainFlag(false)
-                                        .Build();
-
-                                    await client.PublishAsync(message);  // 使用 await
-                                }
-
-                            }
-                            else
-                            {
-                                status = stateValue.ToString(); // 其他情况显示数字本身
-                            }
-
-                            // 更新全局状态
-                            GlobalStatus.Status = status; // 使用全局状态
-                            // 更新运行状态信息
-                            GlobalData.UpdateAgvInfo("运行状态", status);
-                            GlobalDisplayData.UpdateDisplayInfo(MqttConnectionManager.CurrentAddress, "运行状态", status);
-                        }
-                        else
-                        {
-                            GlobalStatus.Status = "未知"; // 更新全局状态
-                            // 如果没有找到数字，处理错误或默认行为
-                            GlobalData.UpdateAgvInfo("运行状态", "未知");
-                            GlobalDisplayData.UpdateDisplayInfo(MqttConnectionManager.CurrentAddress, "运行状态", "未知");
-                        }
+                        await MqttMessageProcessingService.HandleAssignmentStateMessageAsync(_address, payload, PublishTaskDoneAckAsync);
                     }
                     if (topic == "AGV/Carrier/Common")
                     {
@@ -254,6 +186,16 @@ namespace AGVManagement.Mqtt
             //    _car = new Car(new Point(ActualWidthNow, ActualHeightNow), 144, 96);
             //    mainPanel.Children.Add(_car.Shape);
             //});
+        }
+
+        private async Task PublishTaskDoneAckAsync()
+        {
+            var client = MqttConnectionManager.LatestClient;
+            if (client != null && client.IsConnected)
+            {
+                var message = MqttMessageProcessingService.BuildTaskDoneMessage();
+                await client.PublishAsync(message);
+            }
         }
 
         //发布消息

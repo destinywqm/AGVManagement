@@ -100,38 +100,7 @@ namespace AGVManagement
             string Times = mapMessage.SettingInfoMap();
             this.Dispatcher.Invoke(new Action(() =>
             {
-                if (da == null)
-                {
-                    ComboBoxItem item = new ComboBoxItem();
-                    item.Content = "请选择";
-                    Maplistq.Items.Add(item);
-                    Maplistq.SelectedIndex = 0;
-                }
-                else
-                {
-                    int Index = 0;
-                    int s = 0;
-                    ComboBoxItem item = new ComboBoxItem();
-                    item.Content = "请选择";
-                    Maplistq.Items.Add(item);
-                    foreach (DataRow data in da.Rows)
-                    {
-                        if (Times != null)
-                        {
-                            if (Times.Equals(data["CreateTime"].ToString()))
-                            {
-                                Index = s;
-                            }
-                        }
-                        ComboBoxItem ite = new ComboBoxItem();
-                        ite.Content = data["Name"].ToString();
-                        ite.Tag = data["Width"].ToString() + "," + data["Height"].ToString() + "," + data["CreateTime"].ToString();
-                        Maplistq.Items.Add(ite);
-                        s++;
-                    }
-                    mapSelect = true;
-                    Maplistq.SelectedIndex = Index + 1;
-                }
+                mapSelect = MapListInitializer.Populate(Maplistq, da, Times);
             }));
         }
 

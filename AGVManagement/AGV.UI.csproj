@@ -248,6 +248,7 @@
     <Compile Include="Main.xaml.cs">
       <DependentUpon>Main.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MapListInitializer.cs" />
     <Compile Include="MapInfo.xaml.cs">
       <DependentUpon>MapInfo.xaml</DependentUpon>
     </Compile>
@@ -281,6 +282,7 @@
     <Compile Include="Mqtt\MqttClientWrapper.cs" />
     <Compile Include="Mqtt\MqttConnectInstrument.cs" />
     <Compile Include="Mqtt\MqttConnectionManager.cs" />
+    <Compile Include="Mqtt\MqttMessageProcessingService.cs" />
     <Compile Include="Mqtt\TopicSending.cs" />
     <Compile Include="Operation.xaml.cs">
       <DependentUpon>Operation.xaml</DependentUpon>
@@ -363,7 +365,9 @@
     </Compile>
     <Compile Include="Enumeration\ColorType.cs" />
     <Compile Include="MapPaint\AreaCompile.cs" />
+    <Compile Include="AgvDataViewResetter.cs" />
     <Compile Include="MapPaint\MapInstrument.cs" />
+    <Compile Include="MapWindowSessionInitializer.cs" />
     <Compile Include="MapPaint\Painting.cs" />
     <Compile Include="MapRedact.xaml.cs">
       <DependentUpon>MapRedact.xaml</DependentUpon>
@@ -372,6 +376,7 @@
       <DependentUpon>MapWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MqttShutdownService.cs" />
     <Page Include="mqtt.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

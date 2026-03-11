@@ -95,12 +95,7 @@ namespace AGVManagement
         public MainWindow(long Times, string MapNa, string MapNs, double Width, double HeMap, double NewWidth, double NewHeMap,  double ScaleRatio)
         {
             InitializeComponent();
-            mainPanel.Children.Clear();
-            Painting.siseWin = 1;
-            MapInstrument.keyValuePairs.Clear();
-            MapInstrument.valuePairs.Clear();
-            MapInstrument.wirePointArrays.Clear();  
-            MapInstrument.GetKeyValues.Clear();
+            MapWindowSessionInitializer.ResetMapDrawingState(mainPanel);
             Time = Times;
             LoadMs(Times, MapNa, MapNs, Width, HeMap, NewWidth, NewHeMap,  ScaleRatio);
             //Loaded += MainWindow_Loaded;
@@ -172,42 +167,8 @@ namespace AGVManagement
         {
             try
             {
-                // 禁用所有连接的自动重连逻辑
-                foreach (var client in MqttConnectionManager.MqttClients.Values)
-                {
-                    client.DisableAutoReconnect(); 
-                }
-
-                // 断开所有连接
-                foreach (var client in MqttConnectionManager.MqttClients.Values)
-                {
-                    if (client.IsConnected)
-                    {
-                        await client.DisconnectAsync(); 
-                    }
-                }
-
-                // 清空连接池
-                MqttConnectionManager.MqttClients.Clear();
-
-                lock (GlobalData.AgvData)
-                {
-                    GlobalData.AgvData.Clear();
-                    //wireSnapshot.Clear();
-                    // 重置当前地址
-                    GlobalData.AgvData.Rows.Add(new object[] { "AGV", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "网络状态", "未连接" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "运行状态", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "车辆坐标X", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "车辆坐标Y", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "运行准备", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "驱动下降", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "脱轨", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "扫描区域", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "电压", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "报警", "" });
-                    GlobalData.AgvData.Rows.Add(new object[] { "报警信息", "" });
-                }
+                await MqttShutdownService.CloseAllConnectionsAsync();
+                AgvDataViewResetter.Reset(GlobalData.AgvData);
             }
             catch (Exception ex)
             {
