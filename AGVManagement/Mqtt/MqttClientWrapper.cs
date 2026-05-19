@@ -1,47 +1,50 @@
-﻿using MQTTnet.Client.Options;
-using MQTTnet.Client;
+﻿using AGVManagement.MapPaint;
+using AGVManagement.Models;
 using MQTTnet;
+using MQTTnet.Client;
+using MQTTnet.Client.Options;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using static AGVManagement.MainWindow;
-using System.Windows.Threading;
-using System.Text.Json;
-using System.Windows.Controls;
 using System.Windows;
-using System.Net;
-using AGVManagement.MapPaint;
-using System.Net.Http;
-using System.Windows.Markup;
-using System.Text.RegularExpressions;
+using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace AGVManagement.Mqtt
 {
+    /// <summary>
+    /// 单个 AGV 的 MQTT 连接封装：连接、订阅、消息处理、小车 UI 更新
+    /// </summary>
     public class MqttClientWrapper
     {
-        public IMqttClient _mqttClient;
+        // ── 公开字段 / 属性 ───────────────────────────────────────────────
         public IMqttClient Client => _mqttClient;
+        public bool IsConnected => _mqttClient?.IsConnected ?? false;
 
-        private Car _car;
-        private Dispatcher _dispatcher;
-        private string _address;
+        public static string payloadAll;
+
+        public static double ActualWidthNow;
+        public static double ActualHeightNow;
+        public static double ProportionNow;
+
+        // ── 私有字段 ──────────────────────────────────────────────────────
+        public IMqttClient _mqttClient;
+        private AgvCar _car;
+        private Panel _mainPanel;
+
+        private readonly Dispatcher _dispatcher;
+        private readonly string _address;
         private readonly double _length;
         private readonly double _width;
-        public static string payloadAll;
-        private Panel _mainPanel;
-        //public static double ActualWidthNow = 22.756*20*2.5;
-        //public static double ActualHeightNow = 493*2.5-18.618*20*2.5;
-        //public static double ProportionNow = 20*2.5;
-        public static double ActualWidthNow ;
-        public static double ActualHeightNow ;
-        public static double ProportionNow ;
-        SendCarDataToApi sendCarDataToApi = new SendCarDataToApi();
-        private bool _isAutoReconnectEnabled = true;
-        private Panel _mainPanelCut; // 当前显示小车的面板
+        private bool _autoReconnect = true;
 
+        private static readonly HttpClient _httpClient = new HttpClient();
+
+        // ── 构造 ──────────────────────────────────────────────────────────
         public MqttClientWrapper(Dispatcher dispatcher, string address, double length, double width)
         {
             _dispatcher = dispatcher;
@@ -50,20 +53,10 @@ namespace AGVManagement.Mqtt
             _width = width;
         }
 
-        // 添加 IsConnected 属性
-        public bool IsConnected => _mqttClient?.IsConnected ?? false;
+        // ─────────────────────────────────────────────────────────────────
+        //  初始化 & 连接
+        // ─────────────────────────────────────────────────────────────────
 
-        private async Task SendCarDataToApi(CarData data)
-        {
-            var httpClient = new HttpClient();
-            var json = JsonSerializer.Serialize(data);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await httpClient.PostAsync("https://localhost:<port>/api/CarData/update", content);
-            response.EnsureSuccessStatusCode();
-        }
-
-        
         public async Task InitializeAsync(string address, int port, Panel mainPanel)
         {
             _mainPanel = mainPanel;
@@ -71,175 +64,66 @@ namespace AGVManagement.Mqtt
             var factory = new MqttFactory();
             _mqttClient = factory.CreateMqttClient();
 
+            // ── 连接成功 ──
             _mqttClient.UseConnectedHandler(async e =>
             {
-                // 更新网络状态为“已连接”
                 GlobalData.UpdateAgvInfo("网络状态", "已连接");
                 Application.Current.Dispatcher.Invoke(() =>
-                {
-                    GlobalDisplayData.SetAgvConnected(_address);
-                });
-                //GlobalDisplayData.UpdateDisplayInfo("网络状态", "已连接");
+                    GlobalDisplayData.SetAgvConnected(_address));
 
-                await _mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("AGV/Response/SOC").Build());
-                await _mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("AGV/Carrier/Common").Build());
-                await _mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("AGV/Response/AssignmentState").Build());
+                await _mqttClient.SubscribeAsync(
+                    new MqttTopicFilterBuilder().WithTopic("AGV/Response/SOC").Build());
+                await _mqttClient.SubscribeAsync(
+                    new MqttTopicFilterBuilder().WithTopic("AGV/Carrier/Common").Build());
+                await _mqttClient.SubscribeAsync(
+                    new MqttTopicFilterBuilder().WithTopic("AGV/Response/AssignmentState").Build());
             });
 
-
-
-            // 已断开事件
+            // ── 断开连接 ──
             _mqttClient.UseDisconnectedHandler(e =>
             {
-                // 只有在实际连接过后再触发“未连接”状态
-                if (e.ClientWasConnected)
+                if (!e.ClientWasConnected) return;
+
+                GlobalData.UpdateAgvInfo("网络状态", "未连接");
+                Application.Current.Dispatcher.Invoke(() =>
+                    GlobalDisplayData.SetAgvDisconnected(_address));
+
+                _dispatcher.Invoke(() =>
                 {
-                    // 更新网络状态为“未连接”
-                    GlobalData.UpdateAgvInfo("网络状态", "未连接");
-                    //GlobalDisplayData.UpdateDisplayInfo("网络状态", "未连接");
-                    Application.Current.Dispatcher.Invoke(() =>
+                    if (_car != null)
                     {
-                        GlobalDisplayData.SetAgvDisconnected(_address);
-                    });
-                    // 在断开连接时移除小车
-                    _dispatcher.Invoke(() =>
-                    {
-                        if (_car != null)
-                        {
-                            _mainPanel.Children.Remove(_car.Shape);
-                            _car = null; // 清空小车对象
-                        }
-
-                        // 强制刷新 UI
-                        _mainPanel.UpdateLayout();
-                    });
-                }
-
-                // 可选：显示消息框提示断开连接
-                //MessageBox.Show($"与地址 {_address} 的连接已断开。", "连接断开", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        _mainPanel.Children.Remove(_car.Shape);
+                        _car = null;
+                    }
+                    _mainPanel.UpdateLayout();
+                });
             });
 
-
+            // ── 收到消息 ──
             _mqttClient.UseApplicationMessageReceivedHandler(async e =>
             {
-                var topic = e.ApplicationMessage.Topic;
-                var payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
+                string topic = e.ApplicationMessage.Topic;
+                string payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
+
                 try
                 {
-                    if (topic == "AGV/Response/SOC")
+                    switch (topic)
                     {
-                        // 使用正则表达式提取数字部分
-                        var match = Regex.Match(payload, @"\d+");
-                        if (match.Success)
-                        {
-                            // 如果匹配成功，提取并更新电压信息
-                            string voltage = match.Value; // 获取提取的数字部分
-                            GlobalData.UpdateAgvInfo("电压", $"{voltage}%");
-                            GlobalDisplayData.UpdateDisplayInfo(_address, "电压", $"{voltage}%");
-                        }
-                        else
-                        {
-                            // 如果没有找到数字，处理错误或默认行为
-                            GlobalData.UpdateAgvInfo("电压", "未知");
-                            GlobalDisplayData.UpdateDisplayInfo(_address, "电压", "未知");
-                        }
-                    }
+                        case "AGV/Response/SOC":
+                            HandleSoc(payload);
+                            break;
 
-                    if (topic == "AGV/Response/AssignmentState" )
-                    {
-                        // 使用正则表达式提取数字部分
-                        var match = Regex.Match(payload, @"\d+");
-                        if (match.Success)
-                        {
-                            // 获取提取的数字部分
-                            int stateValue = int.Parse(match.Value);
+                        case "AGV/Response/AssignmentState":
+                            await HandleAssignmentStateAsync(payload);
+                            break;
 
-                            // 根据数字值设置不同的运行状态
-                            string status;
-                            if (stateValue == 97)
-                            {
-                                status = "进行中";   // 97 表示进行中
-                            }
-                            else if (stateValue == 32)
-                            {
-                                status = "无任务";   // 32 表示无任务
-                            }
-                            else if (stateValue == 122)
-                            {
-                                status = "已完成";  // 122 表示已完成
-
-                                // 向 "AGV/Response/TaskDone" 话题发布消息 "已接收"
-                                var client = MqttConnectionManager.LatestClient;
-                                if (client != null && client.IsConnected)
-                                {
-                                    var message = new MqttApplicationMessageBuilder()
-                                        .WithTopic("AGV/Response/TaskDone")
-                                        .WithPayload("已接收")
-                                        .WithExactlyOnceQoS()
-                                        .WithRetainFlag(false)
-                                        .Build();
-
-                                    await client.PublishAsync(message);  // 使用 await
-                                }
-
-                            }
-                            else
-                            {
-                                status = stateValue.ToString(); // 其他情况显示数字本身
-                            }
-
-                            // 更新全局状态
-                            GlobalStatus.Status = status; // 使用全局状态
-                            // 更新运行状态信息
-                            GlobalData.UpdateAgvInfo("运行状态", status);
-                            GlobalDisplayData.UpdateDisplayInfo(MqttConnectionManager.CurrentAddress, "运行状态", status);
-                        }
-                        else
-                        {
-                            GlobalStatus.Status = "未知"; // 更新全局状态
-                            // 如果没有找到数字，处理错误或默认行为
-                            GlobalData.UpdateAgvInfo("运行状态", "未知");
-                            GlobalDisplayData.UpdateDisplayInfo(MqttConnectionManager.CurrentAddress, "运行状态", "未知");
-                        }
-                    }
-                    if (topic == "AGV/Carrier/Common")
-                    {
-                        var data = JsonSerializer.Deserialize<CarData>(payload);
-
-                        // 缩
-                        data.X *= ProportionNow;
-                        data.Y *= -ProportionNow;
-                        data.Z = -data.Z;
-                        
-                        //SendCarDataToApi(data);
-
-                        // 只有在收到消息后才显示小车
-                        if (_car == null)
-                        {
-                            _dispatcher.Invoke(() =>
-                            {
-                                // 移除旧的小车，确保界面干净
-                                if (_car != null)
-                                {
-                                    _mainPanel.Children.Remove(_car.Shape);
-                                    _car = null;
-                                }
-
-                                _car = new Car(_address, new Point(ActualWidthNow, ActualHeightNow), _length * ProportionNow, _width * ProportionNow);
-                                _mainPanel.Children.Add(_car.Shape);
-                            });
-                        }
-                        payloadAll = payload;
-                        UpdateCarPosition(data);
+                        case "AGV/Carrier/Common":
+                            await HandleCarCommonAsync(payload);
+                            break;
                     }
                 }
-                catch (JsonException)       
-                {
-                    // 如果反序列化失败，忽略这个错误，不进行处理
-                }
+                catch (JsonException) { /* 忽略非 JSON 消息 */ }
             });
-
-
 
             var options = new MqttClientOptionsBuilder()
                 .WithTcpServer(address, port)
@@ -247,100 +131,151 @@ namespace AGVManagement.Mqtt
                 .Build();
 
             await _mqttClient.ConnectAsync(options, CancellationToken.None);
-
-            // 创建小车并添加到面板
-            //_dispatcher.Invoke(() =>
-            //{
-            //    _car = new Car(new Point(ActualWidthNow, ActualHeightNow), 144, 96);
-            //    mainPanel.Children.Add(_car.Shape);
-            //});
         }
 
-        //发布消息
-        public async Task PublishAsync(MqttApplicationMessage message)
+        // ─────────────────────────────────────────────────────────────────
+        //  消息处理（私有，按 Topic 拆分）
+        // ─────────────────────────────────────────────────────────────────
+
+        private void HandleSoc(string payload)
         {
-            if (_mqttClient != null && _mqttClient.IsConnected)
+            var match = Regex.Match(payload, @"\d+");
+            string voltage = match.Success ? $"{match.Value}%" : "未知";
+            GlobalData.UpdateAgvInfo("电压", voltage);
+            GlobalDisplayData.UpdateDisplayInfo(_address, "电压", voltage);
+        }
+
+        private async Task HandleAssignmentStateAsync(string payload)
+        {
+            var match = Regex.Match(payload, @"\d+");
+            string status;
+
+            if (match.Success)
             {
-                await _mqttClient.PublishAsync(message);
+                int val = int.Parse(match.Value);
+                switch (val)
+                {
+                    case 97: status = "进行中"; break;
+                    case 32: status = "无任务"; break;
+                    case 122:
+                        status = "已完成";
+                        var client = MqttConnectionManager.LatestClient;
+                        if (client != null && client.IsConnected)
+                        {
+                            var msg = new MqttApplicationMessageBuilder()
+                                .WithTopic("AGV/Response/TaskDone")
+                                .WithPayload("已接收")
+                                .WithExactlyOnceQoS().WithRetainFlag(false).Build();
+                            await client.PublishAsync(msg);
+                        }
+                        break;
+                    default: status = val.ToString(); break;
+                }
             }
             else
             {
-                throw new InvalidOperationException("MQTT客户端未连接。");
+                status = "未知";
+            }
+
+            GlobalStatus.Status = status;
+            GlobalData.UpdateAgvInfo("运行状态", status);
+            GlobalDisplayData.UpdateDisplayInfo(MqttConnectionManager.CurrentAddress, "运行状态", status);
+        }
+
+        private async Task HandleCarCommonAsync(string payload)
+        {
+            var data = JsonSerializer.Deserialize<CarData>(payload);
+
+            double rawX = data.X;
+            double rawY = data.Y;
+
+            data.X *= ProportionNow;
+            data.Y *= -ProportionNow;
+            data.Z = -data.Z;
+
+            // 首次收到消息时创建小车 UI
+            if (_car == null)
+            {
+                _dispatcher.Invoke(() =>
+                {
+                    _car = new AgvCar(
+                        _address,
+                        new Point(ActualWidthNow, ActualHeightNow),
+                        _length * ProportionNow,
+                        _width * ProportionNow);
+                    _mainPanel.Children.Add(_car.Shape);
+                });
+            }
+
+            payloadAll = payload;
+            UpdateCarPosition(data, rawX, rawY);
+
+            await Task.CompletedTask;
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  公开操作
+        // ─────────────────────────────────────────────────────────────────
+
+        public async Task PublishAsync(MqttApplicationMessage message)
+        {
+            if (_mqttClient == null || !_mqttClient.IsConnected)
+                throw new InvalidOperationException("MQTT 客户端未连接。");
+            await _mqttClient.PublishAsync(message);
+        }
+
+        public async Task SubscribeAsync(string topic)
+        {
+            try
+            {
+                if (_mqttClient == null || !_mqttClient.IsConnected)
+                    throw new InvalidOperationException("MQTT 客户端未连接。");
+                await _mqttClient.SubscribeAsync(
+                    new MqttTopicFilterBuilder().WithTopic(topic).Build());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"订阅失败：{ex.Message}", "错误",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        public void DisableAutoReconnect()
-        {
-            _isAutoReconnectEnabled = false;
-        }
+        public void DisableAutoReconnect() => _autoReconnect = false;
 
         public async Task DisconnectAsync()
         {
             if (_mqttClient != null && _mqttClient.IsConnected)
             {
                 await _mqttClient.DisconnectAsync();
-                _mqttClient.Dispose(); // 确保清理 MQTT 客户端
+                _mqttClient.Dispose();
                 _mqttClient = null;
             }
-        }
-
-        //订阅主题
-        public async Task SubscribeAsync(string topic)
-        {
-            try
-            {
-                if (_mqttClient != null && _mqttClient.IsConnected)
-            {
-                await _mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(topic).Build());
-            }
-            else
-            {
-                throw new InvalidOperationException("MQTT客户端未连接。");
-            }
-            }   
-            catch (Exception ex)
-            {
-                MessageBox.Show($"发送数据失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void UpdateCarPosition(CarData data)
-        {
-            _dispatcher.InvokeAsync(() =>
-            {
-                if (_car != null) // 仅当车辆存在时更新
-                {
-                    _car.UpdatePosition(data.X, data.Y, data.Z);
-                }
-            });
         }
 
         public async Task<string> GetMessageFromTopicAsync(string topic)
         {
             if (_mqttClient == null || !_mqttClient.IsConnected)
-                throw new InvalidOperationException("MQTT client is not initialized or connected.");
-            
-            var tcs = new TaskCompletionSource<string>();
+                throw new InvalidOperationException("MQTT 客户端未初始化或未连接。");
 
-            // 设置消息处理程序
+            var tcs = new TaskCompletionSource<string>();
             _mqttClient.UseApplicationMessageReceivedHandler(e =>
-            {   
-                if (e.ApplicationMessage?.Topic == topic)   
-                {
-                    var payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
-                    tcs.SetResult(payload);
-                }
+            {
+                if (e.ApplicationMessage?.Topic == topic)
+                    tcs.TrySetResult(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
             });
 
-            // 订阅主题
-            await _mqttClient.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(topic).Build());
-
-            // 等待消息到达
+            await _mqttClient.SubscribeAsync(
+                new MqttTopicFilterBuilder().WithTopic(topic).Build());
             return await tcs.Task;
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        //  私有工具
+        // ─────────────────────────────────────────────────────────────────
 
+        private void UpdateCarPosition(CarData data, double rawX, double rawY)
+        {
+            _dispatcher.InvokeAsync(() => _car?.UpdatePosition(data.X, data.Y, data.Z, rawX, rawY));
+        }
     }
-
-
 }

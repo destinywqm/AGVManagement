@@ -1,24 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using AGVManagement.Models;   
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using static AGVManagement.MainWindow;
 
 namespace AGVManagement.MapPaint
 {
+    /// <summary>将 CarData 推送到外部 API</summary>
     public class SendCarDataToApi
     {
-        private async Task SendCarDataToApiInter(CarData data)
+        private static readonly HttpClient _httpClient = new HttpClient();
+
+        /// <summary>POST CarData 到指定接口</summary>
+        public async Task SendAsync(CarData data, string apiUrl)
         {
-            var httpClient = new HttpClient();
             var json = JsonSerializer.Serialize(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await httpClient.PostAsync("https://localhost:<port>/api/CarData/update", content);
-            response.EnsureSuccessStatusCode();
+            var resp = await _httpClient.PostAsync(apiUrl, content);
+            resp.EnsureSuccessStatusCode();
         }
     }
 }

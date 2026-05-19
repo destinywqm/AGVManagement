@@ -4,17 +4,17 @@
 winexe
 C#
 .cs
-E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGVManagement\obj\x86\Debug\
+E:\AGVtest\AGV-master\AGVManagement\obj\x86\Debug\
 AGVManagement
 none
 false
 DEBUG;TRACE
-E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGVManagement\App.xaml
+E:\AGVtest\AGV-master\AGVManagement\App.xaml
 38-990917325
 
-59-938901564
-1462106348464
+65-1140165735
+1461657230485
 AddCar.xaml;AddMap.xaml;AutoPath.xaml;BeaconRedact.xaml;CarEditorWindow.xaml;CarListWindow.xaml;Circuitredact.xaml;LineInputDialog.xaml;Main.xaml;MapInfo.xaml;MapRedact.xaml;MapWindow.xaml;mqtt.xaml;MqttConnect.xaml;Operation.xaml;PortSetting.xaml;RepositioningPage.xaml;RepositioningTag.xaml;Styles\BaseStyle.xaml;Styles\Bootstrap.xaml;Styles\Button.xaml;Styles\Colors.xaml;Styles\DataGrid.xaml;Styles\Fonts.xaml;Styles\FormControl.xaml;Styles\InputGroup.xaml;Styles\Label.xaml;Styles\Panel.xaml;Styles\Path.xaml;Styles\ProgressBar.xaml;Styles\Sizes.xaml;Styles\style.xaml;Styles\Window.xaml;TagLine.xaml;TagMessage.xaml;TagRedact.xaml;Test.xaml;TextRedact.xaml;
 
-False
+True
 

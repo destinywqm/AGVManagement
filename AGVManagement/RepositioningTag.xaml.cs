@@ -1,16 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Data;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace AGVManagement
 {
@@ -19,39 +9,71 @@ namespace AGVManagement
     /// </summary>
     public partial class RepositioningTag : Window
     {
+        // ── 属性 ──────────────────────────────────────────────────────────
+
+        /// <summary>用户选中的站点名称，例如 "TA3"</summary>
         public string dataResStatu { get; private set; }
 
+        /// <summary>用户选中的角度值</summary>
         public string dataResAngel { get; private set; }
 
-        public RepositioningTag()
+        // ── 构造 ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 构造函数：传入当前地图的站点表，自动填充站点下拉框。
+        /// </summary>
+        /// <param name="tagTable">
+        ///   由 TagInfoBLL.RataTable(Time.ToString()) 返回的 DataTable，
+        ///   需包含 TagName 列（存储数字部分，如 "3" 对应 TA3）。
+        /// </param>
+        public RepositioningTag(DataTable tagTable)
         {
             InitializeComponent();
+            LoadTagOptions(tagTable);
         }
+
+        // ── 私有方法 ──────────────────────────────────────────────────────
+
+        /// <summary>从 DataTable 读取所有 TagName，拼成 "TA{n}" 后填入下拉框。</summary>
+        private void LoadTagOptions(DataTable tagTable)
+        {
+            if (tagTable == null) return;
+
+            foreach (DataRow row in tagTable.Rows)
+            {
+                string tagName = row["TagName"]?.ToString();
+                if (!string.IsNullOrWhiteSpace(tagName))
+                    dataMes.Items.Add("TA" + tagName);
+            }
+
+            // 默认选中第一项，方便操作
+            if (dataMes.Items.Count > 0)
+                dataMes.SelectedIndex = 0;
+        }
+
+        // ── 事件 ──────────────────────────────────────────────────────────
 
         private void OnCompleteButtonClick(object sender, RoutedEventArgs e)
         {
-            // 在这里验证输入并关闭窗口
-            dataResStatu = dataMes.Text;
+            // 站点：取下拉框选中值
+            dataResStatu = dataMes.SelectedItem?.ToString();
+
+            // 角度：取 ComboBox 选中的 ComboBoxItem
             if (dataMes3.SelectedItem is ComboBoxItem selectedItem)
-            {
-                dataResAngel = selectedItem.Content.ToString(); // 使用 Content 属性
-            }
-            DialogResult = true;  // 设置对话框结果为 true 表示用户确认
+                dataResAngel = selectedItem.Content.ToString();
+
+            DialogResult = true;
             Close();
         }
 
         private void dataMes3_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // 获取选中的值
-            if (dataMes3.SelectedItem is ComboBoxItem selectedItem)
-            {
-                string selectedValue = selectedItem.Content.ToString();
-            }
+            // 保留原有事件钩子，如需联动逻辑可在此扩展
         }
 
         private void OnCancelButtonClick(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            Close();
         }
     }
 }

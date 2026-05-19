@@ -26,7 +26,7 @@
 
         <!-- 站点输入 -->
         <Label Content="站点:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="10"/>
-        <TextBox x:Name="dataMes" Grid.Row="0" Grid.Column="1" Width="170" Height="30" Margin="10"/>
+        <ComboBox x:Name="dataMes" Grid.Row="0" Grid.Column="1" Width="170" Height="30" Margin="10"/>
 
         <!-- Angle 选择 -->
         <Label Content="Angle:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="10"/>

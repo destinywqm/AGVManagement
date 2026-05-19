@@ -42,14 +42,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGV.BLL.dll" size="7680">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGV.BLL.dll" size="10240">
       <assemblyIdentity name="AGV.BLL" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>AVuyIqJAWMT05IvmV02uG3jHYDkj5n8goOYW1J9vRC8=</dsig:DigestValue>
+        <dsig:DigestValue>IAK0wu89FC79Qkirb74mHZXinXxDJEvQDx6J1huyv6M=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -61,7 +61,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>lntKeMK10U86ztCQUr0sGJb0JbtfYecGEr/i9Jj6o6Y=</dsig:DigestValue>
+        <dsig:DigestValue>q4COYu/ThTqMfdnXjLt8/fuCXeH0CggjUlM8vlRsUmo=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -73,7 +73,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>XgUz0ccvqgx/cu+7bQCykD7mxRqyub/pjWPT9m3Kzi8=</dsig:DigestValue>
+        <dsig:DigestValue>hZ8XsjsRwEAk//wSequPextQk/A3p7egC4HaMewz8ok=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -90,14 +90,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGVManagement.exe" size="872960">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGVManagement.exe" size="885248">
       <assemblyIdentity name="AGVManagement" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>ORKu9mRiZHeP8gejOho6h2fR5YLSUuO3S/8Iqxd8+ro=</dsig:DigestValue>
+        <dsig:DigestValue>jaECmHHbashDWLeiFUPb5IPybIkT2NJ2akDzVoD+xXI=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -182,6 +182,18 @@
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
         <dsig:DigestValue>0sfC1XN+eDnEyvyDSkcQgv7Ar6x5wsMRbQmI5HFNbwc=</dsig:DigestValue>
+      </hash>
+    </dependentAssembly>
+  </dependency>
+  <dependency>
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Newtonsoft.Json.dll" size="721320">
+      <assemblyIdentity name="Newtonsoft.Json" version="13.0.0.0" publicKeyToken="30AD4FE6B2A6AEED" language="neutral" processorArchitecture="msil" />
+      <hash>
+        <dsig:Transforms>
+          <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+        </dsig:Transforms>
+        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+        <dsig:DigestValue>8MB68OhNTdTaS9eCO6RTW8BIGzv2I+1Atlm2gUemu3U=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

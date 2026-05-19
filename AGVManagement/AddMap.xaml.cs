@@ -36,19 +36,13 @@ namespace AGVManagement
         #region 验证
         private bool Validator()
         {
-            if (MapSizeN.Text.Trim() == "")
-            {
-                return false;
-            }
-            else if (MapSizeW.Text.Trim() == "")
-            {
-                return false;
-            }
-            else if (MapSizeH.Text.Trim() == "")
-            {
-                return false;
-            }
-            return true;
+            return !string.IsNullOrWhiteSpace(MapSizeN.Text) &&
+                   !string.IsNullOrWhiteSpace(RawWidth.Text) &&
+                   !string.IsNullOrWhiteSpace(RawHeight.Text) &&
+                   !string.IsNullOrWhiteSpace(Resolution.Text) &&
+                   !string.IsNullOrWhiteSpace(OriginX.Text) &&
+                   !string.IsNullOrWhiteSpace(OriginY.Text) &&
+                   !string.IsNullOrWhiteSpace(ScaleFactor.Text);
         }
         #endregion
 
@@ -57,21 +51,72 @@ namespace AGVManagement
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
+        #region 提交（核心计算）
         private void MapSum_Click(object sender, RoutedEventArgs e)
         {
             if (!Validator())
-                return;
-            this.Close();
-            long gs = 0;
-            MainWindow main = new MainWindow(gs, null, MapSizeN.Text,Convert.ToDouble(MapSizeW.Text.Trim()), Convert.ToDouble(MapSizeH.Text.Trim()), Convert.ToDouble(ActualLength.Text.Trim()), Convert.ToDouble(ActualWidth.Text.Trim()), Convert.ToDouble(ScaleRatio.Text.Trim()));
-            if (!string.IsNullOrEmpty(importedImagePath))
             {
-                main.SetBackgroundImage(importedImagePath); // 传递图片路径
+                MessageBox.Show("请填写完整数据！");
+                return;
             }
-            main.ShowDialog();
-            
+            this.Close();
+            try
+            {
+                // ===== 原始输入 =====
+                double width = Convert.ToDouble(RawWidth.Text.Trim());
+                double height = Convert.ToDouble(RawHeight.Text.Trim());
+                double resolution = Convert.ToDouble(Resolution.Text.Trim());
+                double originX = Convert.ToDouble(OriginX.Text.Trim());
+                double originY = Convert.ToDouble(OriginY.Text.Trim());
+                double scale = Convert.ToDouble(ScaleFactor.Text.Trim());
 
+                if (resolution == 0)
+                {
+                    MessageBox.Show("分辨率不能为0！");
+                    return;
+                }
+
+                // 核心计算 
+                double pixelPerMeter = 1.0 / resolution;  // 20
+
+                //
+                double finalW = (width / resolution) * 0.1 * scale;   // 9.35/0.05 * 0.1 * 7 = 130.9 ✅
+                double finalH = (height / resolution) * 0.1 * scale;  // 12.35/0.05 * 0.1 * 7 = 172.9 ✅
+
+                // 比例不变
+                double finalScaleRatio = pixelPerMeter * scale;  
+
+                double originX_ui = Math.Abs(originX) * pixelPerMeter * scale;
+                
+
+                double originY_ui = ((height / resolution) * scale) - Math.Abs(originY) * pixelPerMeter * scale;
+
+                long gs = 0;
+
+                MainWindow main = new MainWindow(
+    gs,
+    null,
+    MapSizeN.Text,
+    finalW,        // 130.9
+    finalH,        // 172.9
+    originX_ui,    // 434.6
+    originY_ui,    // 464.07
+    finalScaleRatio // 140
+);
+
+                if (!string.IsNullOrEmpty(importedImagePath))
+                {
+                    main.SetBackgroundImage(importedImagePath);
+                }
+
+                main.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
+        #endregion
 
         //图片传递
         private void ImportImageBtn_Click(object sender, RoutedEventArgs e)

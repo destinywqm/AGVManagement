@@ -1,106 +1,71 @@
-﻿using AGV.BLL;
+﻿// ============================================================
+//  Circuitredact.xaml.cs（重构后）
+//  主要变更：
+//    - 移除 using static AGVManagement.MainWindow
+//    - 改为 using AGVManagement.Models
+//    - newPointStraightWithAngle → NewPointStraightWithAngle
+//    - newStationData            → NewStationData
+//    - ProcessPointsByTurnRotate 调用改为 PathHelper.ProcessPointsByTurnRotate
+//    - 删除多余的空事件、无用 using
+// ============================================================
+using AGV.BLL;
+using AGVManagement.Helpers;
 using AGVManagement.instrument;
 using AGVManagement.MapPaint;
+using AGVManagement.Models;
 using AGVManagement.Mqtt;
 using MQTTnet;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Web.UI.WebControls;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using static AGVManagement.MainWindow;
 
 namespace AGVManagement
 {
-    /// <summary>
-    /// Circuitredact.xaml 的交互逻辑
-    /// </summary>
     public partial class Circuitredact : Window
     {
-        private MapManag manag = new MapManag();
-        private TagCompile tag = new TagCompile();
-        private OperateDBBLL operate = new OperateDBBLL();
-        private double mpWidth, mpHeight;
-        private long Times;
-        private DataTable dtRoute = new DataTable();
-        private MapMessageBLL messageBLL = new MapMessageBLL();
-        private int edid = 0;
+        // ── 字段 ──────────────────────────────────────────────────────────
+        private readonly MapManag _manag = new MapManag();
+        private readonly TagCompile _tag = new TagCompile();
+        private readonly OperateDBBLL _operate = new OperateDBBLL();
+        private readonly MapMessageBLL _messageBLL = new MapMessageBLL();
+        private readonly TagInfoBLL _tagInfo = new TagInfoBLL();
 
+        private double _mpWidth, _mpHeight;
+        private long _times;
+        private DataTable _dtRoute = new DataTable();
+        private int _editMode = 0; // 0=新建 1=编辑
 
-        private List<MqttClientWrapper> _mqttClients = new List<MqttClientWrapper>();
+        // ── 构造 ──────────────────────────────────────────────────────────
         public Circuitredact()
         {
             InitializeComponent();
-            MapLoad();
+            LoadMapComboBox();
 
-            // 创建 Converter 实例
+            // 角速度列绑定 Converter
             var converter = new DefaultToChineseConverter();
-
-            // 找到角速度列
-            var changeProgramColumn = EditlineData.Columns
+            var col = EditlineData.Columns
                 .OfType<DataGridTextColumn>()
                 .FirstOrDefault(c => c.Header?.ToString() == "角速度");
-
-            //var changePortColumn = 
-            if (changeProgramColumn != null)
-            {
-                // 用 Converter 替换 Binding
-                changeProgramColumn.Binding = new Binding("ChangeProgram")
-                {
-                    Converter = converter
-                };
-            }
+            if (col != null)
+                col.Binding = new Binding("ChangeProgram") { Converter = converter };
         }
 
-        private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
-            {
-                e.Handled = true;
+        // ─────────────────────────────────────────────────────────────────
+        //  地图下拉框
+        // ─────────────────────────────────────────────────────────────────
 
-                // 当前缩放值
-                double currentScale = MapScaleTransform.ScaleX;
-
-                // 缩放因子
-                double zoomFactor = e.Delta > 0 ? 1.05 : 0.95;
-                double newScale = currentScale * zoomFactor;
-
-                // 限制缩放范围
-                if (newScale < 0.2 || newScale > 5)
-                    return;
-
-                // 获取 Canvas 中心作为缩放中心
-                double centerX = MapIN.ActualWidth / 2;
-                double centerY = MapIN.ActualHeight / 2;
-
-                MapScaleTransform.CenterX = centerX;
-                MapScaleTransform.CenterY = centerY;
-
-                // 应用缩放
-                MapScaleTransform.ScaleX = newScale;
-                MapScaleTransform.ScaleY = newScale;
-            }
-        }
-
-
-        /// <summary>
-        /// 载入地图信息
-        /// </summary>
-        private void MapLoad()
+        private void LoadMapComboBox()
         {
             MapInstrument.keyValuePairs.Clear();
             MapInstrument.valuePairs.Clear();
@@ -108,152 +73,133 @@ namespace AGVManagement
             MapInstrument.GetKeyValues.Clear();
             Painting.siseWin = 1;
             SliMax.Value = 0;
+
             SubmitPro.IsEnabled = false;
             DelPro.IsEnabled = false;
-            MapMessageBLL messageBLL = new MapMessageBLL();
-            DataTable da = messageBLL.GetMapData(null);
-            if (da == null)
+
+            DataTable maps = new MapMessageBLL().GetMapData(null);
+            if (maps == null)
             {
-                ComboBoxItem item = new ComboBoxItem();
-                item.Content = "请选择";
-                maplist.Items.Add(item);
-                SubmitPro.IsEnabled = false;
-                DelPro.IsEnabled = false;
+                maplist.Items.Add(new ComboBoxItem { Content = "请选择" });
             }
             else
             {
-                foreach (DataRow data in da.Rows)
-                {
-                    ComboBoxItem ite = new ComboBoxItem();
-                    ite.Content = data["Name"].ToString();
-                    ite.Tag = data["Width"].ToString() + "," + data["Height"].ToString() + "," + data["CreateTime"].ToString();
-                    maplist.Items.Add(ite);
-                }
+                foreach (DataRow row in maps.Rows)
+                    maplist.Items.Add(new ComboBoxItem
+                    {
+                        Content = row["Name"].ToString(),
+                        Tag = $"{row["Width"]},{row["Height"]},{row["CreateTime"]}"
+                    });
             }
             maplist.SelectedIndex = 0;
         }
 
-        /// <summary>
-        /// 地图选择
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void Maplist_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (((ComboBoxItem)maplist.SelectedItem).Tag == null)
-            {
-                return;
-            }
+            var item = maplist.SelectedItem as ComboBoxItem;
+            if (item?.Tag == null) return;
+
             SliMax.Value = 0;
             SubmitPro.IsEnabled = true;
             DelPro.IsEnabled = true;
             EditlineData.ItemsSource = new DataTable().DefaultView;
             lineRo.Items.Clear();
-            MapMessageBLL messageBLL = new MapMessageBLL();
-            string ls = ((ComboBoxItem)maplist.SelectedItem).Tag.ToString();
-            string[] arr = ls.Split(',');
-            dtRoute = messageBLL.BLLMapRoute(arr[2]);
-            if (dtRoute.Rows.Count == 0)    
+
+            string[] arr = item.Tag.ToString().Split(',');
+            _dtRoute = new MapMessageBLL().BLLMapRoute(arr[2]);
+
+            lineRo.Items.Add(new ComboBoxItem { Content = "请选择" });
+            if (_dtRoute.Rows.Count == 0)
             {
-                ComboBoxItem item = new ComboBoxItem { Content = "请选择" };
-                lineRo.Items.Add(item);
                 SubmitPro.IsEnabled = false;
                 DelPro.IsEnabled = false;
-                //decimal.Add
             }
             else
             {
-                ComboBoxItem item = new ComboBoxItem { Content = "请选择" };
-                lineRo.Items.Add(item);
-                foreach (DataRow data in dtRoute.Rows)
-                {
-                    ComboBoxItem ite = new ComboBoxItem();
-                    ite.Content = data["Name"].ToString();
-                    ite.Tag = data["Program"].ToString();
-                    lineRo.Items.Add(ite);
-
-                }
+                foreach (DataRow row in _dtRoute.Rows)
+                    lineRo.Items.Add(new ComboBoxItem
+                    {
+                        Content = row["Name"].ToString(),
+                        Tag = row["Program"].ToString()
+                    });
             }
             lineRo.SelectedIndex = 0;
 
-            if (!maplist.Text.Equals("请选择") && ((ComboBoxItem)maplist.SelectedItem).Tag.ToString().Split(',').Count().Equals(3))
-            {
-                //线路
-                MapInstrument.keyValuePairs.Clear();
-                MapInstrument.valuePairs.Clear();
-                MapInstrument.wirePointArrays.Clear();
-                MapInstrument.GetKeyValues.Clear();
-                Painting.siseWin = 1;
-                int six = Convert.ToInt32(SliMax.Value.ToString("G3"));
-                Painting.siseWin = six.Equals(0) ? 1 : six;
-                MapIN.Children.Clear();
-                string lss = ((ComboBoxItem)maplist.SelectedItem).Tag.ToString();
-                string[] aarr = lss.Split(',');
-                mpWidth = Convert.ToDouble(aarr[0]) * manag.Sise;
-                mpHeight = Convert.ToDouble(aarr[1]) * manag.Sise;
-                //manag
+            // 渲染地图
+            MapInstrument.keyValuePairs.Clear();
+            MapInstrument.valuePairs.Clear();
+            MapInstrument.wirePointArrays.Clear();
+            MapInstrument.GetKeyValues.Clear();
+            Painting.siseWin = 1;
+            MapIN.Children.Clear();
 
-                
-                MapIN.Width = mpWidth;
-                MapIN.Height = mpHeight;
-                Times = long.Parse(aarr[2]);
-                manag.Times = Times;
-                manag.GetData = EditlineData;
-                manag.SelectMap(long.Parse(aarr[2]), MapIN,true);
-            }
+            _mpWidth = Convert.ToDouble(arr[0]) * _manag.Sise;
+            _mpHeight = Convert.ToDouble(arr[1]) * _manag.Sise;
+            MapIN.Width = _mpWidth;
+            MapIN.Height = _mpHeight;
+            _times = long.Parse(arr[2]);
+            _manag.Times = _times;
+            _manag.GetData = EditlineData;
+            _manag.SelectMap(_times, MapIN, true);
         }
 
-        /// <summary>
-        /// 地图缩放
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        // ─────────────────────────────────────────────────────────────────
+        //  地图缩放
+        // ─────────────────────────────────────────────────────────────────
+
+        private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (!(Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))) return;
+            e.Handled = true;
+
+            double newScale = MapScaleTransform.ScaleX * (e.Delta > 0 ? 1.05 : 0.95);
+            if (newScale < 0.2 || newScale > 5) return;
+
+            MapScaleTransform.CenterX = MapIN.ActualWidth / 2;
+            MapScaleTransform.CenterY = MapIN.ActualHeight / 2;
+            MapScaleTransform.ScaleX = newScale;
+            MapScaleTransform.ScaleY = newScale;
+        }
+
         private void SliMax_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            Painting painting = new Painting();
-            painting.mainPan = MapIN;
+            var painting = new Painting { mainPan = MapIN };
             int sis = Convert.ToInt32(e.NewValue);
             MapIN.Children.Clear();
-            if (sis.Equals(0))
-            {
-                MapIN.Width = mpWidth * 1;
-                MapIN.Height = mpHeight * 1;
-                painting.Zoom(1);
-                Painting.siseWin = 1;
-            }
-            else
-            {
-                MapIN.Width = mpWidth * sis;
-                MapIN.Height = mpHeight * sis;
-                painting.Zoom(sis);
-                Painting.siseWin = sis;
-            }
+            int scale = sis == 0 ? 1 : sis;
+            MapIN.Width = _mpWidth * scale;
+            MapIN.Height = _mpHeight * scale;
+            painting.Zoom(scale);
+            Painting.siseWin = scale;
         }
 
-        /// <summary>
-        /// line
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        // ─────────────────────────────────────────────────────────────────
+        //  线路选择 / 还原 / 显示
+        // ─────────────────────────────────────────────────────────────────
+
         private void Line_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             try
             {
-                LineRest();
-                if (lineRo.SelectedItem != null && !(lineRo.SelectedItem as ComboBoxItem).Content.ToString().Equals("请选择") && lineRo.Items.Count - 1 > 0)
+                ResetLineColors();
+                var selItem = lineRo.SelectedItem as ComboBoxItem;
+                bool hasSelection = selItem != null
+                    && !selItem.Content.ToString().Equals("请选择")
+                    && lineRo.Items.Count > 1;
+
+                if (hasSelection)
                 {
                     SubmitPro.IsEnabled = true;
-
                     DelPro.IsEnabled = true;
                     ProgramNO.IsEnabled = false;
-                    ProgramNO.Text = ((ComboBoxItem)lineRo.SelectedItem).Tag.ToString();
-                    edid = 1;
-                    ProgramName.Text = ((ComboBoxItem)lineRo.SelectedItem).Content.ToString();
-                    TagLine(lineRo.SelectedIndex - 1, (lineRo.SelectedItem as ComboBoxItem).Content.ToString());
+                    ProgramNO.Text = selItem.Tag.ToString();
+                    ProgramName.Text = selItem.Content.ToString();
+                    _editMode = 1;
+                    ShowLineDetail(lineRo.SelectedIndex - 1, selItem.Content.ToString());
                 }
                 else
                 {
-                    manag.tagType = false;
+                    _manag.tagType = false;
                     SubmitPro.IsEnabled = false;
                     DelPro.IsEnabled = false;
                     ProgramName.Text = "";
@@ -261,18 +207,13 @@ namespace AGVManagement
                     ProgramNO.Text = "0";
                 }
             }
-            catch
-            { ProgramNO.Text = "0"; }
+            catch { ProgramNO.Text = "0"; }
         }
 
-        /// <summary>
-        /// 线路还原
-        /// </summary>
-        public void LineRest()
+        /// <summary>将所有路线 / Tag 颜色还原为默认黑色</summary>
+        public void ResetLineColors()
         {
-            
-            MapInstrument map = new MapInstrument();
-            map.TagFormer();//所有Tag还原为原色
+            new MapInstrument().TagFormer();
             foreach (var item in MapInstrument.wirePointArrays)
             {
                 if (item.GetPath != null)
@@ -280,377 +221,270 @@ namespace AGVManagement
                     item.GetPath.Stroke = Brushes.Black;
                     item.GetPath.StrokeThickness = 1;
                 }
-                List<Path> paths = item.Paths;
-                if (paths != null)
-                {
-                    foreach (Path it in paths)
-                    {
-                        it.Stroke = Brushes.Black;
-                        it.StrokeThickness = 1;
-                    }
-                }
+                item.Paths?.ForEach(p => { p.Stroke = Brushes.Black; p.StrokeThickness = 1; });
             }
         }
 
-        /// <summary>
-        /// 显示线路信息
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="LeName"></param>
-        public void TagLine(int index, string LeName)
+        /// <summary>显示指定行的线路详情到 EditlineData</summary>
+        public void ShowLineDetail(int index, string lineName)
         {
-           
-            string strTag = dtRoute.Rows[index]["Tag"].ToString();
-            string[] Tagar = strTag.Split(',');
+            string[] tags = _dtRoute.Rows[index]["Tag"].ToString().Split(',');
+            string[] speeds = _dtRoute.Rows[index]["Speed"].ToString().Split(',');
+            string[] pbs = _dtRoute.Rows[index]["Pbs"].ToString().Split(',');
+            string[] turns = _dtRoute.Rows[index]["Turn"].ToString().Split(',');
+            string[] dirs = _dtRoute.Rows[index]["Direction"].ToString().Split(',');
+            string[] hooks = _dtRoute.Rows[index]["Hook"].ToString().Split(',');
+            string[] stops = _dtRoute.Rows[index]["Stop"].ToString().Split(',');
+            string[] programs = _dtRoute.Rows[index]["ChangeProgram"].ToString().Split(',');
 
-            string strSpeed = dtRoute.Rows[index]["Speed"].ToString();
-            string[] Speedar = strSpeed.Split(',');
+            var dt = new DataTable();
+            foreach (var col in new[] { "Tag", "Speed", "Pbs", "Turn", "Direction", "Hook", "Stop", "ChangeProgram" })
+                dt.Columns.Add(col);
 
-            string stPbs = dtRoute.Rows[index]["Pbs"].ToString();
-            string[] Pbsar = stPbs.Split(',');
+            for (int i = 0; i < tags.Length; i++)
+                dt.Rows.Add(
+                    tags[i],
+                    TagCompile.agvSpeed[Convert.ToInt32(speeds[i])],
+                    TagCompile.agvPbs[Convert.ToInt32(pbs[i])],
+                    TagCompile.agvTurn[Convert.ToInt32(turns[i])],
+                    TagCompile.agvDire[Convert.ToInt32(dirs[i])],
+                    TagCompile.agvHook[Convert.ToInt32(hooks[i])],
+                    stops[i],
+                    programs[i]);
 
-            string strTurn = dtRoute.Rows[index]["Turn"].ToString();
-            string[] Turnar = strTurn.Split(',');
-
-            string strDirection = dtRoute.Rows[index]["Direction"].ToString();
-            string[] Directionar = strDirection.Split(',');
-
-            string strHook = dtRoute.Rows[index]["Hook"].ToString();
-            string[] Hookar = strHook.Split(',');
-
-            string strStop = dtRoute.Rows[index]["Stop"].ToString();
-            string[] Stopar = strStop.Split(',');
-
-            string strChangeProgram = dtRoute.Rows[index]["ChangeProgram"].ToString();
-            string[] ChangeProgramar = strChangeProgram.Split(',');
-
-            DataTable dt = new DataTable();
-            dt.Columns.Add(new DataColumn("Tag"));
-            dt.Columns.Add(new DataColumn("Speed"));
-            dt.Columns.Add(new DataColumn("Pbs"));
-            dt.Columns.Add(new DataColumn("Turn"));
-            dt.Columns.Add(new DataColumn("Direction"));
-            dt.Columns.Add(new DataColumn("Hook"));
-            dt.Columns.Add(new DataColumn("Stop"));
-            dt.Columns.Add(new DataColumn("ChangeProgram"));
-            for (int i = 0; i < Tagar.Length; i++)
+            if (tags.Length > 0)
             {
-                dt.Rows.Add(new object[] { Tagar[i], TagCompile.agvSpeed[Convert.ToInt32(Speedar[i])], TagCompile.agvPbs[Convert.ToInt32(Pbsar[i])], TagCompile.agvTurn[Convert.ToInt32(Turnar[i])], TagCompile.agvDire[Convert.ToInt32(Directionar[i])], TagCompile.agvHook[Convert.ToInt32(Hookar[i])], Stopar[i], ChangeProgramar[i] });
+                GetScroll.ScrollToHorizontalOffset(MapInstrument.valuePairs[Convert.ToInt32(tags[0])].Margin.Left - 600);
+                GetScroll.ScrollToVerticalOffset(MapInstrument.valuePairs[Convert.ToInt32(tags[0])].Margin.Top - 600);
             }
-            if (Tagar.Count() > 0)
-            {
-                GetScroll.ScrollToHorizontalOffset(MapInstrument.valuePairs[Convert.ToInt32(Tagar[0])].Margin.Left - 600);//滚动条X轴跟随移动
-                GetScroll.ScrollToVerticalOffset(MapInstrument.valuePairs[Convert.ToInt32(Tagar[0])].Margin.Top - 600); ///滚动条Y轴等随移动
-            }
+
             EditlineData.ItemsSource = dt.DefaultView;
             EditlineData.AutoGenerateColumns = false;
-            manag.table = dt;
-            manag.tagType = true;
-            manag.TagCic();
-            manag.lineMap.TagClick(Times, Convert.ToInt32(dt.Rows[dt.Rows.Count - 1]["Tag"]), EditlineData, dt,false);
+            _manag.table = dt;
+            _manag.tagType = true;
+            _manag.TagCic();
+            _manag.lineMap.TagClick(_times, Convert.ToInt32(dt.Rows[dt.Rows.Count - 1]["Tag"]),
+                EditlineData, dt, false);
         }
 
-        /// <summary>
-        /// 表格点击
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        // ─────────────────────────────────────────────────────────────────
+        //  DataGrid 行点击
+        // ─────────────────────────────────────────────────────────────────
+
         private void EditlineData_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Released)
-            {
-                if (EditlineData.SelectedItems.Count > 0)
-                {
-                    List<object> arr = ((DataRowView)EditlineData.SelectedValue).Row.ItemArray.ToList();
-                    manag.LineMapShow(arr, (EditlineData.SelectedIndex == 0 ? true : false), (EditlineData.SelectedIndex == 0 ? Convert.ToInt32(((DataRowView)EditlineData.SelectedItem)["Tag"]) : Convert.ToInt32(((DataRowView)EditlineData.Items[EditlineData.SelectedIndex - 1])["Tag"])), EditlineData.SelectedIndex);
+            if (e.LeftButton != MouseButtonState.Released || EditlineData.SelectedItems.Count == 0) return;
 
-                    // 打开编辑框后清除选中行，避免再次点空白时重复触发
-                    //EditlineData.SelectedIndex = -1;
-                }
-            }
+            var arr = ((DataRowView)EditlineData.SelectedValue).Row.ItemArray.ToList();
+            bool isFirst = EditlineData.SelectedIndex == 0;
+            int prevTag = isFirst
+                ? Convert.ToInt32(((DataRowView)EditlineData.SelectedItem)["Tag"])
+                : Convert.ToInt32(((DataRowView)EditlineData.Items[EditlineData.SelectedIndex - 1])["Tag"]);
+
+            _manag.LineMapShow(arr, isFirst, prevTag, EditlineData.SelectedIndex);
         }
 
-        /// <summary>
-        /// 删除
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        // ─────────────────────────────────────────────────────────────────
+        //  新建 / 删除 / 提交
+        // ─────────────────────────────────────────────────────────────────
+
+        private void AddPro_Click(object sender, RoutedEventArgs e)
+        {
+            ResetLineColors();
+            SubmitPro.IsEnabled = true;
+            DelPro.IsEnabled = true;
+            ProgramNO.IsEnabled = true;
+            ProgramName.Text = "";
+            ProgramNO.Text = "0";
+            _editMode = 0;
+
+            var dr = new DataTable();
+            foreach (var col in new[] { "Tag", "Speed", "Pbs", "Turn", "Direction", "Hook", "Stop", "ChangeProgram" })
+                dr.Columns.Add(col);
+
+            EditlineData.ItemsSource = dr.DefaultView;
+            _manag.table = dr;
+            _manag.tagType = true;
+            _manag.TagCic();
+        }
+
         private void DelPro_Click(object sender, RoutedEventArgs e)
         {
-            if (!edid.Equals(0))
+            if (!_editMode.Equals(0))
             {
-                MessageBoxResult confirmToDel = MessageBox.Show("确认要删除线路吗？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (confirmToDel == MessageBoxResult.Yes)
-                {
-                    if (messageBLL.DelRouteMapWithName(Times, ProgramName.Text.Trim())/*messageBLL.DelRouteMap(Times, Convert.ToInt32(ProgramNO.Text.Trim()))*/)
-                    {
-                        MessageBox.Show("删除成功");
-                        AddPro_Click(null, null);
-                        Maplist_SelectionChanged(null, null);
-                    }
-                    else
-                    {
-                        MessageBox.Show("删除失败");
-                    }
-                }
+                if (MessageBox.Show("确认要删除线路吗？", "提示",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+                bool ok = _messageBLL.DelRouteMapWithName(_times, ProgramName.Text.Trim());
+                MessageBox.Show(ok ? "删除成功" : "删除失败");
+                if (ok) { AddPro_Click(null, null); Maplist_SelectionChanged(null, null); }
             }
             else
             {
                 AddPro_Click(null, null);
             }
-           
         }
 
-        /// <summary>
-        /// 新建
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void AddPro_Click(object sender, RoutedEventArgs e)
+        private void SubmitPro_Click(object sender, RoutedEventArgs e)
         {
-            LineRest();
-            SubmitPro.IsEnabled = true;
-            ProgramNO.IsEnabled = true;
-            DelPro.IsEnabled = true;
-            ProgramName.Text = "";
-            ProgramNO.Text = "0";
-            edid = 0;
-            DataTable dr = new DataTable();
-            EditlineData.ItemsSource = dr.DefaultView;
-            dr.Columns.Add(new DataColumn("Tag"));
-            dr.Columns.Add(new DataColumn("Speed"));
-            dr.Columns.Add(new DataColumn("Pbs"));
-            dr.Columns.Add(new DataColumn("Turn"));
-            dr.Columns.Add(new DataColumn("Direction"));
-            dr.Columns.Add(new DataColumn("Hook"));
-            dr.Columns.Add(new DataColumn("Stop"));
-            dr.Columns.Add(new DataColumn("ChangeProgram"));
-            manag.table = dr;
-            manag.tagType = true;
-            manag.TagCic();
-        }
+            if (string.IsNullOrEmpty(ProgramNO.Text) || string.IsNullOrEmpty(ProgramName.Text))
+            { MessageBox.Show("请输入线路名称及线路号"); return; }
+            if (!IsFloat(ProgramNO.Text.Trim()))
+            { MessageBox.Show("线路号只能为数字"); return; }
+            if (EditlineData.Items.Count == 0)
+            { MessageBox.Show("未编辑线路"); return; }
 
-        /// <summary>
-        /// 匹配是否为数字
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        public bool IsFloat(string str)
-        {
-            string regextext = @"^(-?\d+)(\.\d+)?$";
-            Regex regex = new Regex(regextext, RegexOptions.None);
-            return regex.IsMatch(str.Trim());
-        }
+            // 拼接各字段字符串
+            var sb = new Dictionary<string, StringBuilder>();
+            foreach (var k in new[] { "Tag", "Speed", "Stop", "Turn", "Dir", "Pbs", "Hook", "Program" })
+                sb[k] = new StringBuilder();
 
-        private void ProgramNO_TextChanged(object sender, TextChangedEventArgs e)
-        {
-
-        }
-
-        private void ProgramName_TextChanged(object sender, TextChangedEventArgs e)
-        {
-
-        }
-
-
-        TagInfoBLL tagInfo = new TagInfoBLL();
-
-
-        public DataTable ProcessDataNow(DataTable originalDt)
-        {
-            // 创建一个副本以避免修改原始DataTable
-            DataTable newDt = originalDt.Copy();
-
-            // 假设第二列是X，第三列是Y
-            foreach (DataRow row in newDt.Rows)
+            for (int i = 0; i < EditlineData.Items.Count; i++)
             {
-                // 对第二列(X)的数据乘以10再减去19
-                row[1] = Convert.ToDouble(row[1]) * 10;
-
-                // 对第三列(Y)的数据乘以10再减去11.5
-                row[2] = Convert.ToDouble(row[2]) * 10;
+                var row = (DataRowView)EditlineData.Items[i];
+                sb["Tag"].Append(row[0]); sb["Tag"].Append(',');
+                sb["Speed"].Append(_tag.agvSpeedIndex(row[1].ToString())); sb["Speed"].Append(',');
+                sb["Stop"].Append(row[6]); sb["Stop"].Append(',');
+                sb["Turn"].Append(_tag.agvTurnIndex(row[3].ToString())); sb["Turn"].Append(',');
+                sb["Dir"].Append(_tag.agvDireIndex(row[4].ToString())); sb["Dir"].Append(',');
+                sb["Pbs"].Append(_tag.agvPbsIndex(row[2].ToString())); sb["Pbs"].Append(',');
+                sb["Hook"].Append(_tag.agvHookIndex(row[5].ToString())); sb["Hook"].Append(',');
+                sb["Program"].Append(row[7]); sb["Program"].Append(',');
             }
 
-            return newDt;
+            // 去掉末尾逗号
+            string Tag = sb["Tag"].ToString().TrimEnd(',');
+            string Speed = sb["Speed"].ToString().TrimEnd(',');
+            string Stop = sb["Stop"].ToString().TrimEnd(',');
+            string Turn = sb["Turn"].ToString().TrimEnd(',');
+            string Dir = sb["Dir"].ToString().TrimEnd(',');
+            string Pbs = sb["Pbs"].ToString().TrimEnd(',');
+            string Hook = sb["Hook"].ToString().TrimEnd(',');
+            string Program = sb["Program"].ToString().TrimEnd(',');
+            string agv = "";
+
+            if (_editMode == 0)
+            {
+                if (_messageBLL.Program(ProgramNO.Text.Trim(), _times))
+                { MessageBox.Show("线路号已存在，请重新输入线路号"); return; }
+
+                bool ok = _messageBLL.InsertRouteMap(ProgramNO.Text.Trim(), ProgramName.Text.Trim(),
+                    UTC.ConvertDateTimeLong(DateTime.Now), _times,
+                    Tag, Speed, Stop, Turn, Dir, Pbs, Hook, agv, Program);
+                MessageBox.Show(ok ? "保存成功" : "保存失败");
+                if (ok) Maplist_SelectionChanged(null, null);
+            }
+            else
+            {
+                bool ok = _messageBLL.UpdateRouteMap(_times, Convert.ToInt32(ProgramNO.Text.Trim()),
+                    ProgramName.Text.Trim(), Tag, Speed, Stop, Turn, Dir, Pbs, Hook, agv, Program);
+                MessageBox.Show(ok ? "保存成功" : "保存失败");
+                if (ok) Maplist_SelectionChanged(null, null);
+            }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        //  路线下发
+        // ─────────────────────────────────────────────────────────────────
 
-
-        //从线路处下发任务
         private async void Distribution_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                if (lineRo.SelectedIndex <= 0)
+                if (lineRo.SelectedIndex <= 0) { MessageBox.Show("请选择有效的线路！"); return; }
+
+                int idx = lineRo.SelectedIndex - 1;
+                string mapTag = ((ComboBoxItem)maplist.SelectedItem)?.Tag?.ToString();
+                if (string.IsNullOrEmpty(mapTag)) { MessageBox.Show("未选择地图，请先选择地图！"); return; }
+
+                string[] arr = mapTag.Split(',');
+                DataTable tagTbl = _tagInfo.RataTable(arr[2]);
+                if (tagTbl == null || tagTbl.Rows.Count == 0)
+                { MessageBox.Show("点位数据为空，请检查地图和配置！"); return; }
+
+                // 读取线路字段
+                string[] tags = _dtRoute.Rows[idx]["Tag"].ToString().Split(',');
+                string[] speeds = _dtRoute.Rows[idx]["Speed"].ToString().Split(',');
+                string[] hooks = _dtRoute.Rows[idx]["Hook"].ToString().Split(',');
+                string[] programs = _dtRoute.Rows[idx]["ChangeProgram"].ToString().Split(',');
+                string[] turns = _dtRoute.Rows[idx]["Turn"].ToString().Split(',');
+                string[] obsts = _dtRoute.Rows[idx]["Direction"].ToString().Split(',');
+
+                // 构建详情表
+                var detail = new DataTable();
+                foreach (var col in new[] { "Tag", "X", "Y", "Speed", "Hook", "AngleSpeed", "Turn", "ObsAvoidance" })
+                    detail.Columns.Add(col);
+
+                for (int i = 0; i < tags.Length; i++)
                 {
-                    MessageBox.Show("请选择有效的线路！");
-                    return;
+                    var tr = tagTbl.Select($"TagName = '{tags[i]}'");
+                    if (tr.Length == 0) { MessageBox.Show($"无法找到点位 {tags[i]} 的数据！"); return; }
+                    detail.Rows.Add(
+                        tags[i],
+                        Convert.ToDouble(tr[0]["X"]),
+                        Convert.ToDouble(tr[0]["Y"]),
+                        TagCompile.agvSpeed[Convert.ToInt32(speeds[i])],
+                        TagCompile.agvHook[Convert.ToInt32(hooks[i])],
+                        programs[i],
+                        TagCompile.agvTurn[Convert.ToInt32(turns[i])],
+                        TagCompile.agvDire[Convert.ToInt32(obsts[i])]);
                 }
 
-                int int1 = lineRo.SelectedIndex - 1;
+                DataTable processed = ProcessDataNow(ProcessData(detail));
 
-                MapMessageBLL messageBLL = new MapMessageBLL();
-                string ls = ((ComboBoxItem)maplist.SelectedItem)?.Tag?.ToString();
+                var tuples = PopulateListFromDataTable(processed);
+                var painting = new Painting();
+                var transformed = painting.TransformCoordinatesByTurnRotate(
+                    tuples,
+                    MqttClientWrapper.ActualWidthNow,
+                    MqttClientWrapper.ActualHeightNow,
+                    MqttClientWrapper.ProportionNow);
 
-                if (string.IsNullOrEmpty(ls))
-                {
-                    MessageBox.Show("未选择地图，请先选择地图！");
-                    return;
-                }
+                // ← 改用 PathHelper，类型改为 NewPointStraightWithAngle
+                List<NewPointStraightWithAngle> pts = PathHelper.ProcessPointsByTurnRotate(transformed, 0.001);
 
-                string[] arr = ls.Split(',');
-                DataTable itemTag = tagInfo.RataTable(arr[2]);
+                var stationData = new NewStationData();
+                stationData.Stations.AddRange(pts);
+                string json = JsonSerializer.Serialize(stationData, new JsonSerializerOptions { WriteIndented = true });
 
-                if (dtRoute == null || dtRoute.Rows.Count <= int1)
-                {
-                    MessageBox.Show("无效的线路数据，请检查配置！");
-                    return;
-                }
-
-                string newTag = dtRoute.Rows[int1]["Tag"]?.ToString();
-                string[] newTagar = newTag?.Split(',');
-                if (newTagar == null || newTagar.Length == 0)
-                {
-                    MessageBox.Show("目标点位为空，请检查线路配置！");
-                    return;
-                }
-
-                string newSpeed = dtRoute.Rows[int1]["Speed"]?.ToString();
-                string[] newSpeedar = newSpeed?.Split(',');
-
-                string newHook = dtRoute.Rows[int1]["Hook"]?.ToString();
-                string[] newHookar = newHook?.Split(',');
-
-                string strChangeProgram = dtRoute.Rows[int1]["ChangeProgram"]?.ToString();
-                string[] ChangeProgramar = strChangeProgram?.Split(',');
-
-                string newTurn = dtRoute.Rows[int1]["Turn"]?.ToString();
-                string[] newTurnar = newTurn?.Split(',');
-
-                string obsAvoidance = dtRoute.Rows[int1]["Direction"]?.ToString();
-                string[] obsAvoidancear = obsAvoidance?.Split(',');
-
-                if (itemTag == null || itemTag.Rows.Count == 0)
-                {
-                    MessageBox.Show("点位数据为空，请检查地图和配置！");
-                    return;
-                }
-
-                DataTable newDt = new DataTable();
-                newDt.Columns.Add(new DataColumn("Tag"));
-                newDt.Columns.Add(new DataColumn("X"));
-                newDt.Columns.Add(new DataColumn("Y"));
-                newDt.Columns.Add(new DataColumn("Speed"));
-                newDt.Columns.Add(new DataColumn("Hook"));
-                newDt.Columns.Add(new DataColumn("AngleSpeed"));
-                newDt.Columns.Add(new DataColumn("Turn"));
-                newDt.Columns.Add(new DataColumn("ObsAvoidance"));
-
-                for (int i = 0; i < newTagar.Length; i++)
-                {
-                    var tagRow = itemTag.Select($"TagName = '{newTagar[i]}'");
-                    if (tagRow.Length == 0)
-                    {
-                        MessageBox.Show($"无法找到点位 {newTagar[i]} 的数据！");
-                        return;
-                    }
-
-                    newDt.Rows.Add(new object[]
-                    {
-                     newTagar[i],
-                     Convert.ToDouble(tagRow[0]["X"]),
-                     Convert.ToDouble(tagRow[0]["Y"]),
-                     TagCompile.agvSpeed[Convert.ToInt32(newSpeedar[i])],
-                     TagCompile.agvHook[Convert.ToInt32(newHookar[i])],
-                     ChangeProgramar[i],
-                     TagCompile.agvTurn[Convert.ToInt32(newTurnar[i])],
-                     TagCompile.agvDire[Convert.ToInt32(obsAvoidancear[i])]
-                    });
-                }
-
-                DataTable newDt2 = ProcessData(newDt);
-                newDt2 = ProcessDataNow(newDt2);
-
-                List<Tuple<Point, int, double, double, double, double>> newStagingTagPointRatate = PopulateListFromDataTable(newDt2);
-
-                Painting painting = new Painting();
-                List<Tuple<Point, int, double, double, double, double>> transformedPointsByRotate =
-                    painting.TransformCoordinatesByTurnRotate(newStagingTagPointRatate, MqttClientWrapper.ActualWidthNow, MqttClientWrapper.ActualHeightNow, MqttClientWrapper.ProportionNow);
-
-                List<newPointStraightWithAngle> processedPoints = ProcessPointsByTurnRotate(transformedPointsByRotate, 0.001);
-
-                string folderPath = AppDomain.CurrentDomain.BaseDirectory;
-                string fileName = "TargetPoints.json";
-                string filePath = System.IO.Path.Combine(folderPath, fileName);
-
-                newStationData stationData = new newStationData();
-                stationData.Stations.AddRange(processedPoints);
-
-                string jsonString = JsonSerializer.Serialize(stationData, new JsonSerializerOptions { WriteIndented = true });
-                System.IO.File.WriteAllText(filePath, jsonString);
+                string filePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TargetPoints.json");
+                System.IO.File.WriteAllText(filePath, json);
 
                 var client = MqttConnectionManager.LatestClient;
-                if (client == null)
-                {
-                    MessageBox.Show("当前未选择有效的 MQTT 连接（LatestClient 为 null）。");
-                    return;
-                }
-                if (!client.IsConnected)
-                {
-                    MessageBox.Show("MQTT客户端未连接，请先建立连接。");
-                    return;
-                }
+                if (client == null || !client.IsConnected)
+                { MessageBox.Show("MQTT 客户端未连接，请先建立连接。"); return; }
 
-                if (client != null && client.IsConnected)
+                var msg = new MqttApplicationMessageBuilder()
+                    .WithTopic("AGV/Carrier/MapLine")
+                    .WithPayload(json)
+                    .WithExactlyOnceQoS().WithRetainFlag(false).Build();
+
+                // 重试最多 10 秒
+                bool sent = false;
+                var deadline = DateTime.Now.AddSeconds(10);
+                while (!sent && DateTime.Now < deadline)
                 {
-                    var message = new MqttApplicationMessageBuilder()
-                        .WithTopic("AGV/Carrier/MapLine")
-                        .WithPayload(jsonString)
-                        .WithExactlyOnceQoS()
-                        .WithRetainFlag(false)
-                        .Build();
-
-                    bool sentSuccess = false;
-                    int maxRetryTime = 10 * 1000; // 10秒
-                    int elapsedTime = 0;
-                    int retryInterval = 1000; // 1秒
-
-                    while (!sentSuccess && elapsedTime < maxRetryTime)
+                    try
                     {
-                        try
-                        {
-                            await client.PublishAsync(message);
-                            sentSuccess = true; // 发送成功
-                            MessageBox.Show("路线已下发！");
-                        }
-                        catch (Exception ex)
-                        {
-                            elapsedTime += retryInterval;
-                            if (elapsedTime >= maxRetryTime)
-                            {
-                                MessageBox.Show($"发送失败，已重试 10 秒：{ex.Message}");
-                            }
-                            else
-                            {
-                                await Task.Delay(retryInterval);
-                            }
-                        }
+                        await client.PublishAsync(msg);
+                        sent = true;
+                        MessageBox.Show("路线已下发！");
+                    }
+                    catch (Exception ex) when (DateTime.Now < deadline)
+                    {
+                        await Task.Delay(1000);
+                        _ = ex;
                     }
                 }
-                else
-                {
-                    MessageBox.Show("MQTT客户端未连接，请先建立连接。");
-                }
+                if (!sent) MessageBox.Show("发送失败，已重试 10 秒。");
 
-                LineRest();
-                if (lineRo.SelectedItem != null && !(lineRo.SelectedItem as ComboBoxItem).Content.ToString().Equals("请选择") && lineRo.Items.Count - 1 > 0)
-                {
-                    TagLine(lineRo.SelectedIndex - 1, (lineRo.SelectedItem as ComboBoxItem).Content.ToString());
-                }
+                // 刷新线路高亮
+                ResetLineColors();
+                var selItem = lineRo.SelectedItem as ComboBoxItem;
+                if (selItem != null && !selItem.Content.ToString().Equals("请选择") && lineRo.Items.Count > 1)
+                    ShowLineDetail(lineRo.SelectedIndex - 1, selItem.Content.ToString());
                 else
-                {
                     MessageBox.Show("无线路，请重新选择");
-                }
             }
             catch (Exception ex)
             {
@@ -658,219 +492,90 @@ namespace AGVManagement
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        //  数据处理公共方法（供 PointHandle.FindMesEnd 复用）
+        // ─────────────────────────────────────────────────────────────────
 
-
-        public  DataTable ProcessData(DataTable inputTable)
+        /// <summary>将中文速度/顶升/转向/避障字符串映射为数值，生成标准化 DataTable</summary>
+        public DataTable ProcessData(DataTable input)
         {
-            // 定义映射关系
-            var agvSpeedMapping = new Dictionary<string, double>
-        {
-            { "0.5", 0.5 },
-            { "-0.5", -0.5 },
-            { "0.6", 0.6 },
-            { "-0.6", -0.6 },
-            { "0.8", 0.8 },
-            { "-0.8", -0.8 },
-            { "1.0", 1.0 },
-            { "-1.0", -1.0 },
-            { "1.2", 1.2 },
-            { "-1.2", -1.2 },
-            { "缺省", 0.7 } // -1 代表无变化
-        };
-
-            var agvHookMapping = new Dictionary<string, int>
-        {
-            { "移动前下降", 12 },
-            { "移动前升起", 11 },
-            { "移动后下降", 22 },
-            { "移动后升起", 21 },
-            { "缺省", 0 }
-        };
-
-            var agvTurn = new Dictionary<string, double>
-        {
-            { "默认", 1 },
-            { "正向", 1 },
-            { "反向", 0 }
-        };
-            var agvObsAvoidancear = new Dictionary<string, double>
+            var speedMap = new Dictionary<string, double>
             {
-                {"避障", 0 },
-                {"不避障", 1},
-                {"缺省", 0 }
+                {"0.5",0.5},{"-0.5",-0.5},{"0.6",0.6},{"-0.6",-0.6},
+                {"0.8",0.8},{"-0.8",-0.8},{"1.0",1.0},{"-1.0",-1.0},
+                {"1.2",1.2},{"-1.2",-1.2},{"缺省",0.7}
             };
-
-
-            // 创建新 DataTable
-            DataTable newDt = new DataTable();
-            newDt.Columns.Add(new DataColumn("Tag", typeof(int)));
-            newDt.Columns.Add(new DataColumn("X", typeof(double)));
-            newDt.Columns.Add(new DataColumn("Y", typeof(double)));
-            newDt.Columns.Add(new DataColumn("Speed", typeof(double)));
-            newDt.Columns.Add(new DataColumn("Hook", typeof(int)));
-            newDt.Columns.Add(new DataColumn("AngleSpeed", typeof(double)));
-            newDt.Columns.Add(new DataColumn("Turn", typeof(double)));
-            newDt.Columns.Add(new DataColumn("ObsAvoidance", typeof(double)));
-
-            // 填充新 DataTable
-            foreach (DataRow row in inputTable.Rows)
+            var hookMap = new Dictionary<string, int>
             {
-                int tag = Convert.ToInt32(row["Tag"]);
-                double x = Convert.ToDouble(row["X"]);
-                double y = Convert.ToDouble(row["Y"]);
-                double speed = agvSpeedMapping[row["Speed"].ToString()];
-                int hook = agvHookMapping[row["Hook"].ToString()];
-                //double angleSpeed = Convert.ToDouble(row["AngleSpeed"]);
-                double angleSpeed = 0; 
+                {"移动前下降",12},{"移动前升起",11},{"移动后下降",22},{"移动后升起",21},{"缺省",0}
+            };
+            var turnMap = new Dictionary<string, double> { { "默认", 1 }, { "正向", 1 }, { "反向", 0 } };
+            var obsMap = new Dictionary<string, double> { { "避障", 0 }, { "不避障", 1 }, { "缺省", 0 } };
 
+            var result = new DataTable();
+            foreach (var (col, t) in new[] {
+                ("Tag",typeof(int)),("X",typeof(double)),("Y",typeof(double)),
+                ("Speed",typeof(double)),("Hook",typeof(int)),("AngleSpeed",typeof(double)),
+                ("Turn",typeof(double)),("ObsAvoidance",typeof(double)) })
+                result.Columns.Add(col, t);
+
+            foreach (DataRow row in input.Rows)
+            {
+                double angleSpeed;
                 string angleInput = row["AngleSpeed"].ToString().Trim();
-
-                if (angleInput == "default")
-                {
-                    angleSpeed = 0.25;
-                }
+                if (angleInput == "default") angleSpeed = 0.25;
                 else if (!double.TryParse(angleInput, out angleSpeed))
-                {
-                    throw new ArgumentException($"无效的角速度输入值：'{angleInput}'，应为数值或 'default'");
-                }
-                double turn = agvTurn[row["Turn"].ToString()];
-                double obsAvoidance = agvObsAvoidancear[row["ObsAvoidance"].ToString()];
+                    throw new ArgumentException($"无效的角速度输入值：'{angleInput}'");
 
-                newDt.Rows.Add(new object[] { tag, x, y, speed, hook, angleSpeed, turn, obsAvoidance });
+                result.Rows.Add(
+                    Convert.ToInt32(row["Tag"]),
+                    Convert.ToDouble(row["X"]),
+                    Convert.ToDouble(row["Y"]),
+                    speedMap[row["Speed"].ToString()],
+                    hookMap[row["Hook"].ToString()],
+                    angleSpeed,
+                    turnMap[row["Turn"].ToString()],
+                    obsMap[row["ObsAvoidance"].ToString()]);
             }
-                
-            return newDt;
+            return result;
         }
 
-        public List<Tuple<Point, int, double, double, double, double>> PopulateListFromDataTable(DataTable dataTable)
+        /// <summary>将坐标 × 10（m → 像素基准）</summary>
+        public DataTable ProcessDataNow(DataTable input)
         {
-            var newStagingTagPointRatate = new List<Tuple<Point, int, double, double, double, double>>();
-
-            foreach (DataRow row in dataTable.Rows)
+            DataTable copy = input.Copy();
+            foreach (DataRow row in copy.Rows)
             {
-                double x = Convert.ToDouble(row["X"]);
-                double y = Convert.ToDouble(row["Y"]);
-                int hook = Convert.ToInt32(row["Hook"]);
-                double speed = Convert.ToDouble(row["Speed"]);
-                double angleSpeed = Convert.ToDouble(row["AngleSpeed"]);
-                double turn = Convert.ToDouble(row["Turn"]);
-                double obsAvoidance = Convert.ToDouble(row["ObsAvoidance"]);
-
-                Point point = new Point(x, y);
-                var tuple = new Tuple<Point, int, double, double, double, double>(point, hook, speed, angleSpeed, turn, obsAvoidance);
-                newStagingTagPointRatate.Add(tuple);
+                row[1] = Convert.ToDouble(row[1]) * 10;
+                row[2] = Convert.ToDouble(row[2]) * 10;
             }
-
-            return newStagingTagPointRatate;
+            return copy;
         }
 
-
-
-
-
-
-        /// <summary>
-        /// 提交
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void SubmitPro_Click(object sender, RoutedEventArgs e)
+        /// <summary>将 DataTable 行转换为 6-Tuple 列表（供坐标变换使用）</summary>
+        public List<Tuple<Point, int, double, double, double, double>> PopulateListFromDataTable(DataTable dt)
         {
-            if (string.IsNullOrEmpty(ProgramNO.Text) || string.IsNullOrEmpty(Convert.ToString(ProgramName.Text)))
-            {
-                MessageBox.Show("请输入线路名称及线路号");
-                return;
-            }
-            if (!IsFloat(ProgramNO.Text.Trim()))
-            {
-                MessageBox.Show("线路号只能为数字");
-                return;
-            }
-            else if (EditlineData.Items.Count == 0)
-            {
-                MessageBox.Show("未编辑线路");
-                return;
-            }
-            StringBuilder sbTag = new StringBuilder();
-            StringBuilder sbSpeed = new StringBuilder();
-            StringBuilder sbStop = new StringBuilder();
-            StringBuilder sbTurn = new StringBuilder();
-            StringBuilder sbDirection = new StringBuilder();
-            StringBuilder sbPbs = new StringBuilder();
-            StringBuilder sbHook = new StringBuilder();
-            StringBuilder sbProgram = new StringBuilder();
-
-            for (int i = 0; i < EditlineData.Items.Count; i++)
-            {
-                sbTag.Append(((DataRowView)EditlineData.Items[i])[0]);
-                sbTag.Append(",");
-                sbSpeed.Append(tag.agvSpeedIndex(((DataRowView)EditlineData.Items[i])[1].ToString()));
-                sbSpeed.Append(",");
-                sbStop.Append(((DataRowView)EditlineData.Items[i])[6]);
-                sbStop.Append(",");
-                sbTurn.Append(tag.agvTurnIndex(((DataRowView)EditlineData.Items[i])[3].ToString()));
-                sbTurn.Append(",");
-                sbDirection.Append(tag.agvDireIndex(((DataRowView)EditlineData.Items[i])[4].ToString()));
-                sbDirection.Append(",");
-                sbPbs.Append(tag.agvPbsIndex(((DataRowView)EditlineData.Items[i])[2].ToString()));
-                sbPbs.Append(",");
-                sbHook.Append(tag.agvHookIndex(((DataRowView)EditlineData.Items[i])[5].ToString()));
-                sbHook.Append(",");
-                sbProgram.Append(((DataRowView)EditlineData.Items[i])[7]);
-                sbProgram.Append(",");
-            }
-
-            sbTag.Remove(sbTag.Length - 1, 1);
-            sbSpeed.Remove(sbSpeed.Length - 1, 1);
-            sbStop.Remove(sbStop.Length - 1, 1);
-            sbTurn.Remove(sbTurn.Length - 1, 1);
-            sbDirection.Remove(sbDirection.Length - 1, 1);
-            sbPbs.Remove(sbPbs.Length - 1, 1);
-            sbHook.Remove(sbHook.Length - 1, 1);
-            sbProgram.Remove(sbProgram.Length - 1, 1);
-
-            string tagStr = sbTag.ToString();
-            string speedStr = sbSpeed.ToString();
-            string stopStr = sbStop.ToString();
-            string turnStr = sbTurn.ToString();
-            string direStr = sbDirection.ToString();
-            string pbsStr = sbPbs.ToString();
-            string hookStr = sbHook.ToString();
-            string programStr = sbProgram.ToString();
-
-            string agvStr = "";//地图上不用注册agv，为保证程序正常运行保留字段。
-            if (edid.Equals(0))
-            {
-                if (messageBLL.Program(ProgramNO.Text.Trim(), Times))
-                {
-                    MessageBox.Show("线路号已存在，请重新输入线路号");
-                    return;
-                }
-                else
-                {
-                    if (messageBLL.InsertRouteMap(ProgramNO.Text.Trim(), ProgramName.Text.Trim(), UTC.ConvertDateTimeLong(DateTime.Now), Times, tagStr, speedStr, stopStr, turnStr, direStr, pbsStr, hookStr, agvStr, programStr))
-                    {
-                        MessageBox.Show("保存成功");
-                        Maplist_SelectionChanged(null, null);
-                    }
-                    else
-                    {
-                        MessageBox.Show("保存失败");
-                    }
-                }
-            }
-            else if (edid.Equals(1))
-            {
-                if (messageBLL.UpdateRouteMap(Times, Convert.ToInt32(ProgramNO.Text.Trim()), ProgramName.Text.Trim(), tagStr, speedStr, stopStr, turnStr, direStr, pbsStr, hookStr, agvStr, programStr))
-                {
-                    MessageBox.Show("保存成功");
-                    Maplist_SelectionChanged(null, null);
-                }
-                else
-                {
-                    MessageBox.Show("保存失败");
-                }
-            }
+            var list = new List<Tuple<Point, int, double, double, double, double>>();
+            foreach (DataRow row in dt.Rows)
+                list.Add(Tuple.Create(
+                    new Point(Convert.ToDouble(row["X"]), Convert.ToDouble(row["Y"])),
+                    Convert.ToInt32(row["Hook"]),
+                    Convert.ToDouble(row["Speed"]),
+                    Convert.ToDouble(row["AngleSpeed"]),
+                    Convert.ToDouble(row["Turn"]),
+                    Convert.ToDouble(row["ObsAvoidance"])));
+            return list;
         }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  辅助
+        // ─────────────────────────────────────────────────────────────────
+
+        public bool IsFloat(string str)
+            => Regex.IsMatch(str.Trim(), @"^(-?\d+)(\.\d+)?$");
+
+        // 空实现占位
+        private void ProgramNO_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { }
+        private void ProgramName_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { }
     }
 }

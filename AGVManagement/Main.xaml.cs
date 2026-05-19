@@ -1,1095 +1,588 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+﻿// ============================================================
+//  Main.xaml.cs（重构后）
+//  职责：主窗口 UI 事件响应
+// ============================================================
 using AGV.BLL;
-using AGVManagement.MapPaint;
-using System.Threading;
-using System.IO.Ports;
 using AGV.Models.Models;
 using AGVDLL;
-using System.Windows.Controls.Primitives;
-using System.Runtime.InteropServices;
-using System.Windows.Interop;
-using AGV.DAL;
-using Renci.SshNet;
-using AGVManagement.Mqtt;
-using MQTTnet.Client;
-using System.Windows.Threading;
 using AGVManagement.instrument;
+using AGVManagement.MapPaint;
+using AGVManagement.Mqtt;
+using AGVManagement.Services;
+using System;
+using System.Collections.Generic;
+using System.Data;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace AGVManagement
 {
-    /// <summary>
-    /// Main.xaml 的交互逻辑
-    /// </summary>
     public partial class Main : Window
     {
-        private OperateDBBLL dBBLL = new OperateDBBLL();
-        private MapMessageBLL mapMessage = new MapMessageBLL();
-        private bool mapSelect = false; //地图加载标志位
-        private string selAgv = "1"; //默认显示AGV
-        private MapManag manag = new MapManag();
-        private Dispatcher _dispatcher;
+        // ── 字段 ──────────────────────────────────────────────────────────
+        private readonly OperateDBBLL _dBBLL = new OperateDBBLL();
+        private readonly MapMessageBLL _mapMessage = new MapMessageBLL();
+        private readonly MapManag _manag = new MapManag();
+        private readonly PortService _portService = new PortService();
 
-        private SshClient sshClient;
-        private AgvInfoViewModel agvViewModel = new AgvInfoViewModel();
+        private bool _mapLoaded = false;
+        private string _selAgv = "1";
 
+        // ── 构造 ──────────────────────────────────────────────────────────
         public Main()
         {
             InitializeComponent();
-            _dispatcher = Dispatcher;
+
             MqttConnectionManager.ClientsChanged += RefreshAgvDropdown;
-            AgvInfo();
-            LoadMap();
 
-            // 绑定显示用 DataTable
+            BindAgvDataGrids();
+            LoadMapAsync();
             GlobalDisplayData.BindToDataGrid(TabAgvInfo);
-            //InitializeAgvInfoUpdates(MainWindow._mqttClientWrapper);
+
+            _portService.PollTick += OnPortPollTick;
+
+            // ── 给 TabAgvInfo 挂右键菜单 ──────────────────────────────────
+            BuildTabAgvInfoContextMenu();
         }
 
-        private void RefreshAgvDropdown()
+        // ─────────────────────────────────────────────────────────────────
+        //  初始化
+        // ─────────────────────────────────────────────────────────────────
+
+        private void BindAgvDataGrids()
         {
-            AgvSelectComboBox.ItemsSource = null;
-            AgvSelectComboBox.ItemsSource = MqttConnectionManager.MqttClients.Keys.ToList();
-
-            if (!string.IsNullOrEmpty(MqttConnectionManager.CurrentAddress))
-                AgvSelectComboBox.SelectedItem = MqttConnectionManager.CurrentAddress;
-        }
-
-        #region ==========初始化数据库=========
-
-        /// <summary>
-        /// 初始化数据库
-        /// </summary>
-        public void LoadDB()
-        {
-            dBBLL.CreateDBMap();
-        }
-
-        #endregion ==========初始化数据库=========
-
-        #region ==========载入地图信息=========
-
-        public void LoadMap()
-        {
-            Thread thread = new Thread(() =>
-            { LoadDB(); MapLoad(); });
-            thread.IsBackground = true;
-            thread.Start();
-        }
-
-        /// <summary>
-        /// 载入地图信息
-        /// </summary>
-        private void MapLoad()
-        {
-            MapMessageBLL messageBLL = new MapMessageBLL();
-            DataTable da = messageBLL.GetMapData(null);
-            string Times = mapMessage.SettingInfoMap();
-            this.Dispatcher.Invoke(new Action(() =>
-            {
-                if (da == null)
-                {
-                    ComboBoxItem item = new ComboBoxItem();
-                    item.Content = "请选择";
-                    Maplistq.Items.Add(item);
-                    Maplistq.SelectedIndex = 0;
-                }
-                else
-                {
-                    int Index = 0;
-                    int s = 0;
-                    ComboBoxItem item = new ComboBoxItem();
-                    item.Content = "请选择";
-                    Maplistq.Items.Add(item);
-                    foreach (DataRow data in da.Rows)
-                    {
-                        if (Times != null)
-                        {
-                            if (Times.Equals(data["CreateTime"].ToString()))
-                            {
-                                Index = s;
-                            }
-                        }
-                        ComboBoxItem ite = new ComboBoxItem();
-                        ite.Content = data["Name"].ToString();
-                        ite.Tag = data["Width"].ToString() + "," + data["Height"].ToString() + "," + data["CreateTime"].ToString();
-                        Maplistq.Items.Add(ite);
-                        s++;
-                    }
-                    mapSelect = true;
-                    Maplistq.SelectedIndex = Index + 1;
-                }
-            }));
-        }
-
-        #endregion ==========载入地图信息=========
-
-        #region ==============菜单=============
-
-        /// <summary>
-        /// 线路编辑
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Circui_Click(object sender, RoutedEventArgs e)
-        {
-            Circuitredact circuitredact = new Circuitredact();
-            circuitredact.Show();
-        }
-
-        /// <summary>
-        /// 串口设置
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void PortDern_Click(object sender, RoutedEventArgs e)
-        {
-            //MqttConnect mqttConnect = new MqttConnect();
-            //mqttConnect.ShowDialog();
-            PortSetting port = new PortSetting(this);
-            port.ShowDialog();
-        }
-
-        /// <summary>
-        /// 添加地图
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Map_Add_Click(object sender, RoutedEventArgs e)
-        {
-            AddMap map = new AddMap();
-            map.ShowDialog();
-        }
-
-        /// <summary>
-        /// 编辑信标
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void BeaconCR_Click(object sender, RoutedEventArgs e)
-        {
-            BeaconRedact beacon = new BeaconRedact();
-            beacon.ShowDialog();
-        }
-
-        /// <summary>
-        /// 编辑地图
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Map_btn_Click(object sender, RoutedEventArgs e)
-        {
-            Map mainWindow = new Map();
-            mainWindow.Show();
-        }
-
-
-
-
-        /// <summary>
-        /// 打开串口
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Btnset_Click(object sender, RoutedEventArgs e)
-        {
-            string jsonFilePath = "env1_sgt.json";
-            // 读取本地 JSON 文件内容
-            string json = File.ReadAllText(jsonFilePath);
-            try
-            {
-                string output = CppCBSLib.GetMultiAgentPaths(json);
-                Console.WriteLine("DLL 输出结果:");
-                Console.WriteLine(output);
-
-                System.Windows.MessageBox.Show(output, "DLL 输出结果", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show("调用 DLL 出错: " + ex.Message, "错误", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-            //OpenPort();
-
-        }
-
-        #endregion ==============菜单=============
-
-        #region =========载入AGV初始信息=======
-
-        /// <summary>
-        /// 载入所有串口信息
-        /// </summary>
-        /// <param name="Times"></param>
-        private void ComInfo(long Times)
-        {
-            Empty();
-            DataTable dt = mapMessage.LoadDeviceMap(Times);
-            DataTable data = new DataTable("TabAgvInfo");
-            data.Columns.Add("串口", typeof(String));
-            data.Columns.Add("信息", typeof(String));
-            if (dt.Rows.Count > 0)
-            {
-                foreach (DataRow item in dt.Rows)
-                {
-                    data.Rows.Add(new object[] { "COM", "" + item["Com"].ToString() + "" });
-                    data.Rows.Add(new object[] { "波特率", item["Baud"].ToString() });
-                    if (item["Agv"].ToString() == "Button")
-                    {
-                        data.Rows.Add(new object[] { "AGV / 其他", "按钮" });
-                        //PortInfo.buttonPort.Add(new SerialPort());
-                        PortInfo.buttonCom.Add(Convert.ToInt32(item["Com"].ToString()));
-                        PortInfo.buttonBaud.Add(Convert.ToInt32(item["Baud"].ToString()));
-                        PortInfo.buttonStr.Add("Button");
-                    }
-                    else if (item["Agv"].ToString() == "Charge")
-                    {
-                        data.Rows.Add(new object[] { "AGV / 其他", "充电机" });
-                        //PortInfo.chargePort.Add(new SerialPort());
-                        PortInfo.chargeCom.Add(Convert.ToInt32(item["Com"].ToString()));
-                        PortInfo.chargeBaud.Add(Convert.ToInt32(item["Baud"].ToString()));
-                        PortInfo.chargeStr.Add("Charge");
-                    }
-                    else
-                    {
-                        data.Rows.Add(new object[] { "AGV / 其他", item["Agv"].ToString() });
-                        PortInfo.AGVCom.Add(Convert.ToInt32(item["Com"].ToString()));
-                        PortInfo.Baud.Add(Convert.ToInt32(item["Baud"].ToString()));
-                        PortInfo.agv.Add((item["Agv"].ToString()));
-                    }
-                    data.Rows.Add(new object[] { "状态", "关闭" });
-                }
-            }
-            else
-            {
-                data.Rows.Add(new object[] { "COM", "" });
-                data.Rows.Add(new object[] { "波特率", "" });
-                data.Rows.Add(new object[] { "AGV / 其他", "" });
-                data.Rows.Add(new object[] { "状态", "" });
-            }
-            TabSerialPortData.ItemsSource = data.DefaultView;
-            TabSerialPortData.ColumnWidth = new DataGridLength(1, DataGridLengthUnitType.Star);
-            TabSerialPortData.HeadersVisibility = DataGridHeadersVisibility.None;
-        }
-
-        /// <summary>       
-        /// 显示所有AGV初始信息
-        /// </summary>
-        /// <param name="Time"></param>
-        public void TabAgvMoveInfo(long Time)
-        {
-            List<string> Agvlist = dBBLL.AgvNumListMap(Time);
-            DataTable dt = new DataTable("TabAgvMoveInfo");
-            dt.Columns.Add(new DataColumn("type"));
-            dt.Columns.Add(new DataColumn("TagName"));
-            dt.Columns.Add(new DataColumn("Speed"));
-            dt.Columns.Add(new DataColumn("turn"));
-            dt.Columns.Add(new DataColumn("Dir"));
-            dt.Columns.Add(new DataColumn("Hook"));
-            dt.Columns.Add(new DataColumn("Rfid"));
-            dt.Columns.Add(new DataColumn("Program"));
-            dt.Columns.Add(new DataColumn("Step"));
-
-            for (int i = 0; i < Agvlist.Count; i++)
-            {
-                dt.Rows.Add(new object[] { "离线", Agvlist[i], "", "", "", "", "", "" });
-                MainInfo.agvNo.Add(Agvlist[i]);
-            }
-            if (Agvlist.Count > 0)
-            {
-                  selAgv = Agvlist[0];
-            }
-            TabAgvMoveData.DataContext = dt.DefaultView;
-            TabAgvMoveData.AutoGenerateColumns = false;
-            Open.IsEnabled = true;
-        }
-
-        /// <summary>
-        ///加载单一agv初始信息
-        /// </summary>
-        public void AgvInfo()
-        {
-
-            // 将共享的 DataTable 绑定到 DataGrid
             TabAgvData.ItemsSource = GlobalData.AgvData.DefaultView;
             TabSystemStatusData.ItemsSource = GlobalData.SystemStatusData.DefaultView;
 
             TabAgvData.ColumnWidth = new DataGridLength(1, DataGridLengthUnitType.Star);
             TabAgvData.HeadersVisibility = DataGridHeadersVisibility.None;
-
             TabSystemStatusData.ColumnWidth = new DataGridLength(1, DataGridLengthUnitType.Star);
             TabSystemStatusData.HeadersVisibility = DataGridHeadersVisibility.None;
         }
-    
 
+        private void LoadMapAsync()
+        {
+            var t = new Thread(() => { _dBBLL.CreateDBMap(); FillMapComboBox(); })
+            { IsBackground = true };
+            t.Start();
+        }
 
+        private void FillMapComboBox()
+        {
+            var bll = new MapMessageBLL();
+            DataTable maps = bll.GetMapData(null);
+            string saved = _mapMessage.SettingInfoMap();
 
-        #endregion =========载入AGV初始信息=======
+            Dispatcher.Invoke(() =>
+            {
+                Maplistq.Items.Add(new ComboBoxItem { Content = "请选择" });
+                if (maps == null) { Maplistq.SelectedIndex = 0; return; }
 
-        #region ===========地图选项更改========
+                int target = 0, idx = 0;
+                foreach (DataRow row in maps.Rows)
+                {
+                    if (saved != null && saved == row["CreateTime"].ToString()) target = idx;
+                    Maplistq.Items.Add(new ComboBoxItem
+                    {
+                        Content = row["Name"].ToString(),
+                        Tag = $"{row["Width"]},{row["Height"]},{row["CreateTime"]}"
+                    });
+                    idx++;
+                }
+                _mapLoaded = true;
+                Maplistq.SelectedIndex = target + 1;
+            });
+        }
 
-        /// <summary>
-        /// 地图选项
-        /// </summary>
+        // ─────────────────────────────────────────────────────────────────
+        //  菜单事件
+        // ─────────────────────────────────────────────────────────────────
+
+        private void Map_Add_Click(object s, RoutedEventArgs e) => new AddMap().ShowDialog();
+        private void Map_btn_Click(object s, RoutedEventArgs e) => new Map().Show();
+        private void Circui_Click(object s, RoutedEventArgs e) => new Circuitredact().Show();
+        private void BeaconCR_Click(object s, RoutedEventArgs e) => new BeaconRedact().ShowDialog();
+        private void OpenMap_Click(object s, RoutedEventArgs e) => new Operation().ShowDialog();
+        private void CarStation_Click(object s, RoutedEventArgs e) => new CarListWindow().ShowDialog();
+        private void PortDern_Click(object s, RoutedEventArgs e) => new PortSetting(this).ShowDialog();
+
+        private void Close_Click(object s, RoutedEventArgs e)
+        {
+            _portService.Clear();
+            Application.Current.Shutdown();
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e) => e.Cancel = true;
+
+        private void Btnset_Click(object s, RoutedEventArgs e)
+        {
+            try
+            {
+                string output = CppCBSLib.GetMultiAgentPaths(File.ReadAllText("env1_sgt.json"));
+                MessageBox.Show(output, "DLL 输出结果", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"调用 DLL 出错：{ex.Message}", "错误",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  地图下拉框选择
+        // ─────────────────────────────────────────────────────────────────
+
         public void Maplist_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (mapSelect)
-            {
-                if (!((ComboBoxItem)Maplistq.SelectedItem).Content.Equals("请选择") && ((ComboBoxItem)Maplistq.SelectedItem).Tag != null)
-                {
-                    MapIN.Children.Clear();
-                    manag.Sise = 16;
-                    Open.IsEnabled = false;
-                    string ls = ((ComboBoxItem)Maplistq.SelectedItem).Tag.ToString();
-                    string[] arr = ls.Split(',');
-                    double mpWidth = Convert.ToDouble(arr[0]) * manag.Sise;
-                    double mpHeight = Convert.ToDouble(arr[1]) * manag.Sise;
-                    MapIN.Width = mpWidth;
-                    MapIN.Height = mpHeight;
-                    long Times = long.Parse(arr[2]);
-                    ComInfo(Times);
-                    manag.SelectMapLOad(long.Parse(arr[2]), MapIN);
-                    TabAgvMoveInfo(long.Parse(arr[2]));
-                }
-            }
+            if (!_mapLoaded) return;
+            var item = Maplistq.SelectedItem as ComboBoxItem;
+            if (item?.Tag == null || item.Content.Equals("请选择")) return;
+
+            string[] parts = item.Tag.ToString().Split(',');
+            long mapTime = long.Parse(parts[2]);
+
+            MapIN.Children.Clear();
+            _manag.Sise = 16;
+            MapIN.Width = Convert.ToDouble(parts[0]) * _manag.Sise;
+            MapIN.Height = Convert.ToDouble(parts[1]) * _manag.Sise;
+            Open.IsEnabled = false;
+
+            LoadSerialPortInfo(mapTime);
+            _manag.SelectMapLOad(mapTime, MapIN);
+            LoadAgvMoveTable(mapTime);
         }
 
-        #endregion ===========地图选项更改========
+        // ─────────────────────────────────────────────────────────────────
+        //  串口信息加载
+        // ─────────────────────────────────────────────────────────────────
 
-        #region =======清空所有AGV信息=========
-
-        /// <summary>
-        /// 清空所有AGV信息
-        /// </summary>
-        public void DataGridCrear()
+        private void LoadSerialPortInfo(long mapTime)
         {
-            for (int i = 0; i < TabAgvMoveData.Items.Count; i++)
+            PortInfo.AGVCom.Clear(); PortInfo.Baud.Clear(); PortInfo.agv.Clear();
+            PortInfo.buttonCom.Clear(); PortInfo.buttonBaud.Clear(); PortInfo.buttonStr.Clear();
+            PortInfo.chargeCom.Clear(); PortInfo.chargeBaud.Clear(); PortInfo.chargeStr.Clear();
+
+            DataTable dt = _mapMessage.LoadDeviceMap(mapTime);
+            var data = new DataTable();
+            data.Columns.Add("串口"); data.Columns.Add("信息");
+
+            if (dt.Rows.Count == 0)
             {
-                for (int s = 0; s < TabAgvMoveData.Columns.Count; s++)
+                foreach (var label in new[] { "COM", "波特率", "AGV / 其他", "状态" })
+                    data.Rows.Add(label, "");
+            }
+            else
+            {
+                foreach (DataRow row in dt.Rows)
                 {
-                    if (s.Equals(0) || s.Equals(1))
+                    int com = Convert.ToInt32(row["Com"]);
+                    int baud = Convert.ToInt32(row["Baud"]);
+                    string type = row["Agv"].ToString();
+
+                    data.Rows.Add("COM", com);
+                    data.Rows.Add("波特率", baud);
+
+                    switch (type)
                     {
-                        if (s.Equals(0))
-                        {
-                            ((DataRowView)TabAgvMoveData.Items[i])[s] = "离线";
-                            DataGridTemplateColumn tempColumn = this.TabAgvMoveData.Columns[0] as DataGridTemplateColumn;
-                            FrameworkElement element = this.TabAgvMoveData.Columns[0].GetCellContent(this.TabAgvMoveData.Items[i]);
-                            if (element != null)
-                            {
-                                CheckBox ck = tempColumn.CellTemplate.FindName("CheckBoxDN", element) as CheckBox;
-                                ck.Foreground = Brushes.Red;
-                                Style btn_style = (Style)this.FindResource("checkbox has-error");
-                                ck.Style = btn_style;
-                            }
-                        }
-                        continue;
+                        case "Button":
+                            data.Rows.Add("AGV / 其他", "按钮");
+                            PortInfo.buttonCom.Add(com); PortInfo.buttonBaud.Add(baud); PortInfo.buttonStr.Add("Button");
+                            break;
+                        case "Charge":
+                            data.Rows.Add("AGV / 其他", "充电机");
+                            PortInfo.chargeCom.Add(com); PortInfo.chargeBaud.Add(baud); PortInfo.chargeStr.Add("Charge");
+                            break;
+                        default:
+                            data.Rows.Add("AGV / 其他", type);
+                            PortInfo.AGVCom.Add(com); PortInfo.Baud.Add(baud); PortInfo.agv.Add(type);
+                            break;
                     }
-                    ((DataRowView)TabAgvMoveData.Items[i])[s] = "";
+                    data.Rows.Add("状态", "关闭");
                 }
             }
+
+            TabSerialPortData.ItemsSource = data.DefaultView;
+            TabSerialPortData.ColumnWidth = new DataGridLength(1, DataGridLengthUnitType.Star);
+            TabSerialPortData.HeadersVisibility = DataGridHeadersVisibility.None;
         }
 
-        /// <summary>
-        /// 清空AGV信息
-        /// </summary>
-        public void AgvCror()
+        // ─────────────────────────────────────────────────────────────────
+        //  AGV 运行信息表
+        // ─────────────────────────────────────────────────────────────────
+
+        public void LoadAgvMoveTable(long mapTime)
         {
-            ((DataRowView)TabAgvData.Items[0])[1] = "";
-            ((DataRowView)TabAgvData.Items[1])[1] = "";
-            ((DataRowView)TabAgvData.Items[2])[1] = "";
-            ((DataRowView)TabAgvData.Items[3])[1] = "";
-            ((DataRowView)TabAgvData.Items[4])[1] = "";
-            ((DataRowView)TabAgvData.Items[5])[1] = "";
-            ((DataRowView)TabAgvData.Items[6])[1] = "";
-            ((DataRowView)TabAgvData.Items[7])[1] = "";
-            ((DataRowView)TabAgvData.Items[8])[1] = "";
-            ((DataRowView)TabAgvData.Items[9])[1] = "";
+            List<string> agvList = _dBBLL.AgvNumListMap(mapTime);
+
+            var dt = new DataTable();
+            foreach (var col in new[] { "type", "TagName", "Speed", "turn", "Dir", "Hook", "Rfid", "Program", "Step" })
+                dt.Columns.Add(col);
+
+            MainInfo.agvNo.Clear();
+            foreach (string agv in agvList)
+            {
+                dt.Rows.Add("离线", agv, "", "", "", "", "", "", "");
+                MainInfo.agvNo.Add(agv);
+            }
+            if (agvList.Count > 0) _selAgv = agvList[0];
+
+            TabAgvMoveData.DataContext = dt.DefaultView;
+            TabAgvMoveData.AutoGenerateColumns = false;
+            Open.IsEnabled = true;
         }
 
-        #endregion =======清空所有AGV信息=========
-        
-        #region ===========AGV状态更新=========
+        // ─────────────────────────────────────────────────────────────────
+        //  串口打开/关闭按钮
+        // ─────────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// 单一AGV状态更新
-        /// </summary>
-        /// <param name="i"></param>
-        private void AgvDgvInfo(int i)
+        private void Btnset_OpenPort_Click(object sender, RoutedEventArgs e)
         {
-            if (Convert.ToInt32(selAgv) == i)
+            if (_portService.OpenPort())
             {
-                if (MainInfo.carStatusList[i].errorCode == 0 && MainInfo.carStatusList[i].carNum == 0)
-                {
-                    ((DataRowView)TabAgvData.Items[0])[1] = selAgv;
-                    ((DataRowView)TabAgvData.Items[1])[1] = "连接中";
-                    this.Dispatcher.Invoke(new Action(() =>
-                    {
-                        (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[1]) as TextBlock).Foreground = Brushes.Green;
-                    }));
-                    ((DataRowView)TabAgvData.Items[2])[1] = "";
-                    ((DataRowView)TabAgvData.Items[3])[1] = "";
-                    ((DataRowView)TabAgvData.Items[4])[1] = "";
-                    ((DataRowView)TabAgvData.Items[5])[1] = "";
-                    ((DataRowView)TabAgvData.Items[6])[1] = "";
-                    ((DataRowView)TabAgvData.Items[7])[1] = "";
-                    ((DataRowView)TabAgvData.Items[8])[1] = "";     
-                    ((DataRowView)TabAgvData.Items[9])[1] = "";
-                }
-                else if (MainInfo.carStatusList[i].errorCode == 205)
-                {
-                    ((DataRowView)TabAgvData.Items[0])[1] = selAgv;
-                    ((DataRowView)TabAgvData.Items[1])[1] = "离线！！！";
-                    this.Dispatcher.Invoke(new Action(() =>
-                    {
-                        (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[1]) as TextBlock).Foreground = Brushes.Red;
-                    }));
-                    ((DataRowView)TabAgvData.Items[2])[1] = "";
-                    ((DataRowView)TabAgvData.Items[3])[1] = "";
-                    ((DataRowView)TabAgvData.Items[4])[1] = "";
-                    ((DataRowView)TabAgvData.Items[5])[1] = "";
-                    ((DataRowView)TabAgvData.Items[6])[1] = ""; 
-                    ((DataRowView)TabAgvData.Items[7])[1] = "";
-                    ((DataRowView)TabAgvData.Items[8])[1] = "";
-                    ((DataRowView)TabAgvData.Items[9])[1] = "";
-                }
-                else
-                {
-                    ((DataRowView)TabAgvData.Items[0])[1] = MainInfo.carStatusList[i].carNum;
-                    ((DataRowView)TabAgvData.Items[1])[1] = "在线";
-                    this.Dispatcher.Invoke(new Action(() =>
-                    {
-                        (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[1]) as TextBlock).Foreground = Brushes.Green;    
-                    }));
-                    if (MainInfo.carStatusList[i].IsRunning)
-                    {
-                        ((DataRowView)TabAgvData.Items[2])[1] = "行进中";
-                        this.Dispatcher.Invoke(new Action(() =>     
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[2]) as TextBlock).Foreground = Brushes.Green;
-                        }));
-                    }
-                    else
-                    {
-                        ((DataRowView)TabAgvData.Items[2])[1] = "停止";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[2]) as TextBlock).Foreground = Brushes.Red;
-                        }));
-                    }
-
-                    if (MainInfo.carStatusList[i].agvRunReady)
-                    {
-                        ((DataRowView)TabAgvData.Items[3])[1] = "On";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[3]) as TextBlock).Foreground = Brushes.Green;
-                        }));
-                    }
-                    else
-                    {
-                        ((DataRowView)TabAgvData.Items[3])[1] = "Off";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[3]) as TextBlock).Foreground = Brushes.Red;
-                        }));
-                    }
-
-                    if (MainInfo.carStatusList[i].agvDriverDown)
-                    {
-                        ((DataRowView)TabAgvData.Items[4])[1] = "驱动下降";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[4]) as TextBlock).Foreground = Brushes.Green;
-                        }));
-                    }
-                    else
-                    {
-                        ((DataRowView)TabAgvData.Items[4])[1] = "驱动上升";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[4]) as TextBlock).Foreground = Brushes.Red;
-                        }));
-                    }
-                    if (MainInfo.carStatusList[i].agvLineRead)
-                    {
-                        ((DataRowView)TabAgvData.Items[5])[1] = "正常";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[5]) as TextBlock).Foreground = Brushes.Green;
-                        }));
-                    }
-                    else
-                    {
-                        ((DataRowView)TabAgvData.Items[5])[1] = "脱轨";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[5]) as TextBlock).Foreground = Brushes.Red;
-                        }));
-                    }
-
-                    ((DataRowView)TabAgvData.Items[6])[1] = MainInfo.carStatusList[i].pbsArea;
-                    ((DataRowView)TabAgvData.Items[7])[1] = MainInfo.carStatusList[i].powerCurrentF + "V";
-                    if (MainInfo.carStatusList[i].errorSwitch == false)
-                    {
-                        ((DataRowView)TabAgvData.Items[8])[1] = "正常";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[8]) as TextBlock).Foreground = Brushes.Green;
-                        }));
-                    }
-                    else
-                    {
-                        ((DataRowView)TabAgvData.Items[8])[1] = "报警！！！";
-                        this.Dispatcher.Invoke(new Action(() =>
-                        {
-                            (TabAgvData.Columns[1].GetCellContent(TabAgvData.Items[8]) as TextBlock).Foreground = Brushes.Red;
-                        }));
-                    }
-                   ((DataRowView)TabAgvData.Items[9])[1] = Error.errorStr(MainInfo.carStatusList[i].errorCode);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 所有AGV状态更新
-        /// </summary>
-        public void AgvMessg()
-        {
-            while (MainInfo.AgvStaticMessg)
-            {
-                PortMessg();
-                for (int i = 0; i < TabAgvMoveData.Items.Count; i++)
-                {
-   
-                    if (MainInfo.carStatusList.Count > 0)
-                    {
-                        CarStatus car = AgcCarExists(Convert.ToInt32(((DataRowView)TabAgvMoveData.Items[i])[1]));
-                        if (car != null)
-                        {
-                            AgvDgvInfo(Convert.ToInt32(((DataRowView)TabAgvMoveData.Items[i])[1]));
-                            if (car.errorCode == 0 && car.carNum == 0)
-                            {
-                                 
-                                ((DataRowView)TabAgvMoveData.Items[i])[0] = "连接中";
-                                this.Dispatcher.Invoke(new Action(() =>
-                                {
-                                    DataGridTemplateColumn tempColumn = this.TabAgvMoveData.Columns[0] as DataGridTemplateColumn;
-                                    //然后获取DataGridTemplateColumn单元格元素
-                                    FrameworkElement element = this.TabAgvMoveData.Columns[0].GetCellContent(this.TabAgvMoveData.Items[i]);
-                                    if (element != null)
-                                    { //把单元格元素转换为相应的控件，再从该控件中取值
-                                        CheckBox ck = tempColumn.CellTemplate.FindName("CheckBoxDN", element) as CheckBox;
-                                        ck.Foreground = Brushes.Red;
-                                        Style btn_style = (Style)this.FindResource("checkbox has-error");
-                                        ck.Style = btn_style;
-                                    }   
-                                }));
-                            }
-                              else if (car.errorCode == 205)
-                            {
-                                ((DataRowView)TabAgvMoveData.Items[i])[0] = "离线";
-                                this.Dispatcher.Invoke(new Action(() =>
-                                {
-                                    DataGridTemplateColumn tempColumn = this.TabAgvMoveData.Columns[0] as DataGridTemplateColumn;
-                                    FrameworkElement element = this.TabAgvMoveData.Columns[0].GetCellContent(this.TabAgvMoveData.Items[i]);
-                                    if (element != null)
-                                    {
-                                        CheckBox ck = tempColumn.CellTemplate.FindName("CheckBoxDN", element) as CheckBox;
-                                        ck.Foreground = Brushes.Red;
-                                        Style btn_style = (Style)this.FindResource("checkbox has-error");
-                                        ck.Style = btn_style;
-                                    }
-                                }));
-                            }
-                            else
-                            {
-                                ((DataRowView)TabAgvMoveData.Items[i])[0] = "在线";
-                                this.Dispatcher.Invoke(new Action(() =>
-                                {
-                                    DataGridTemplateColumn tempColumn = this.TabAgvMoveData.Columns[0] as DataGridTemplateColumn;
-                                    FrameworkElement element = this.TabAgvMoveData.Columns[0].GetCellContent(this.TabAgvMoveData.Items[i]);
-                                    if (element != null)
-                                    {
-                                        CheckBox ck = tempColumn.CellTemplate.FindName("CheckBoxDN", element) as CheckBox;
-                                        ck.Foreground = Brushes.Green;
-                                        Style btn_style = (Style)this.FindResource("checkbox has-success");
-                                        ck.Style = btn_style;
-                                    }
-                                }));
-                            }
-                            if (car.errorCode != 205 && car.carNum != 0)
-                            {
-                                ((DataRowView)TabAgvMoveData.Items[i])[2] = TagCompile.agvSpeed[car.speedNo] + "米/分钟";
-                                if (car.agvRunRight.Equals(true))
-                                {
-                                    ((DataRowView)TabAgvMoveData.Items[i])[3] = "右转中";
-                                }
-                                else if (car.agvRunLeft.Equals(true))
-                                {
-                                    ((DataRowView)TabAgvMoveData.Items[i])[3] = "左转中";
-                                }
-                                else
-                                {
-                                    ((DataRowView)TabAgvMoveData.Items[i])[3] = "直行";
-                                }
-                                ((DataRowView)TabAgvMoveData.Items[i])[4] = car.agvRunDirection ? "正向" : "反向";
-                                if (car.agvHookUP.Equals(true))
-                                {
-                                    ((DataRowView)TabAgvMoveData.Items[i])[5] = "上升";
-                                }
-                                else
-                                {
-                                    ((DataRowView)TabAgvMoveData.Items[i])[5] = "下降";
-                                }
-                                ((DataRowView)TabAgvMoveData.Items[i])[6] = string.IsNullOrEmpty(car.rfidStatus) ? "无" : car.rfidStatus;
-                                ((DataRowView)TabAgvMoveData.Items[i])[7] = car.programNo;
-                                ((DataRowView)TabAgvMoveData.Items[i])[8] = car.stepNo;
-                            }
-                        }
-                    }
-                }
-                Thread.Sleep(200);
-            }
-        }
-
-        /// <summary>
-        /// 串口状态更新
-        /// </summary>
-        public void PortMessg()
-        {
-            int Index = 0;
-            for (int i = 0; i < PortInfo.AGVCom.Count; i++)
-            {
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.AGVCom[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.Baud[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.agv[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = MainInfo.listPtr[i].ToInt32().Equals(0) ? "关闭" : "打开";
-                Index++;
-            }
-            for (int i = 0; i < PortInfo.buttonCom.Count; i++)
-            {
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.buttonCom[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.buttonBaud[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.buttonStr[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = "关闭";
-                this.Dispatcher.Invoke(new Action(() =>
-                {
-                    (TabSerialPortData.Columns[1].GetCellContent(TabSerialPortData.Items[Index]) as TextBlock).Foreground = Brushes.Red;
-                }));
-                Index++;
-            }
-            for (int i = 0; i < PortInfo.chargeCom.Count; i++)
-            {
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.AGVCom[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.chargeBaud[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = PortInfo.chargeStr[i];
-                Index++;
-                ((DataRowView)TabSerialPortData.Items[Index])[1] = "关闭";
-                this.Dispatcher.Invoke(new Action(() =>
-                {
-                    (TabSerialPortData.Columns[1].GetCellContent(TabSerialPortData.Items[Index]) as TextBlock).Foreground = Brushes.Red;
-                }));
-            }
-        }
-
-        #endregion ===========AGV状态更新=========
-
-        #region ===========AGV状态回读=========
-
-        /// <summary>
-        /// AGV状态回读
-        /// </summary>
-        public void AgvBackward(object groupNo)
-        {
-            int groupNumber = Convert.ToInt32(groupNo);
-            int Index = groupNumber - 1;
-            string[] comAgv = PortInfo.agv[Index].Split(',');
-            for (int i = 0; i < comAgv.Length; i++)
-            {
-                MainInfo.carStatusList.Add(Convert.ToInt32(comAgv[i]), new CarStatus());
-            }
-            while (MainInfo.agvThState)
-            {
-                MainInfo.listAgvDll[Index].agvPortClearCache(groupNumber);//清除agv串口缓存
-                for (int i = 0; i < comAgv.Length; i++)
-                {
-                    CarStatus carStatus = new CarStatus();
-                    carStatus = MainInfo.listAgvDll[Index].read(MainInfo.listPtr[Index], groupNumber, Convert.ToInt32(comAgv[i]));
-                    MainInfo.carStatusList[Convert.ToInt32(comAgv[i])] = carStatus;
-                }
-                Thread.Sleep(200);
-            }
-        }
-
-        #endregion ===========AGV状态回读=========
-
-        #region ==========串口打开关闭=========
-
-        /// <summary>
-        /// 打开串口
-        /// </summary>
-        public void OpenPort()
-        {
-            AGVClear();
-            int ConNum = PortInfo.AGVCom.Count;
-            bool openStatic = true;//打开状态
-            for (int i = 0; i < ConNum; i++)
-            {
-                AGVDLL.AGVDLL agvDLL = new AGVDLL.AGVDLL();
-                agvDLL.dllName = i.ToString();
-                int groupNo = i + 1;
-                IntPtr result = agvDLL.openPort(groupNo, PortInfo.AGVCom[i], PortInfo.Baud[i], MainInfo.prity, MainInfo.stopBits);
-                int a = result.ToInt32();
-                if (result.ToInt32() == 0)
-                {
-                    openStatic = false;
-                    MessageBox.Show("打开串口：COM" + PortInfo.AGVCom[i] + "失败！");
-                    break;
-                }
-                else
-                {
-                    MainInfo.listAgvDll.Add(agvDLL);
-                    MainInfo.listPtr.Add(result);
-                    Thread thread = new Thread(new ParameterizedThreadStart(AgvBackward));
-                    thread.IsBackground = true;
-                    thread.Start(groupNo);
-                    MainInfo.GetThreads.Add(thread);
-                    MainInfo.agvThState = true;
-                }
-            }
-            if (openStatic)//判断串口是否打开成功
-            {
-                Btnswitch.IsEnabled = true;//设置关闭串口按钮可用
-                Open.IsEnabled = false; //设置打开串口按钮不可用
-                Maplistq.IsEnabled = false;//设置地图Combox不可用
+                Btnswitch.IsEnabled = true;
+                Open.IsEnabled = false;
+                Maplistq.IsEnabled = false;
+                Menu.IsEnabled = false;
                 SwitchText.Content = "串口状态：开";
-                //SwitchImg.Source = new BitmapImage(new Uri(@"Images/电子元器件绿.png", UriKind.Relative));
-
-                Thread thread = new Thread(AgvMessg);
-                thread.IsBackground = true;
-                thread.Start();
-                MainInfo.AgvStaticMessg = true;
-                Menu.IsEnabled = false; //导航菜单不可用
-                MainInfo.GetThreads.Add(thread);
                 MessageBox.Show("打开串口成功！");
             }
         }
 
-        /// <summary>
-        /// 关闭串口
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void Btnswitch_Click(object sender, RoutedEventArgs e)
         {
-            int comCount = PortInfo.AGVCom.Count;
-            bool closePort = true;
-            for (int i = 0; i < comCount; i++)
-            {
-                int groupNo = i + 1;
-                if (MainInfo.listAgvDll[i].closePort(groupNo) == 1)
-                {
-                    MainInfo.listPtr[i] = new IntPtr(0);
-                }
-                else
-                {
-                    MessageBox.Show("关闭串口COM" + PortInfo.agv[i].ToString() + "失败！");
-                }
-            }
-            if (closePort)
-            {
-                PortMessg(); //更新串口状态
-                MainInfo.agvThState = false;
-                MainInfo.AgvStaticMessg = false;
-                Maplistq.IsEnabled = true;//设置地图Combox还原
-                Open.IsEnabled = true; //设置打开串口按钮还原
-                Btnswitch.IsEnabled = false; //关闭串口按钮不可用
-                Menu.IsEnabled = true; //导航菜单还原
+            _portService.ClosePort();
+            RefreshPortStatusGrid();
 
-                AGVClear(); //清空数据
-                DataGridCrear();
-                AgvCror();
-                SwitchText.Content = "串口状态：关";
-                //SwitchImg.Source = new BitmapImage(new Uri(@"Images/电子元器件红.png", UriKind.Relative));
-                MessageBox.Show("关闭串口成功！");
-            }
+            Btnswitch.IsEnabled = false;
+            Open.IsEnabled = true;
+            Maplistq.IsEnabled = true;
+            Menu.IsEnabled = true;
+            SwitchText.Content = "串口状态：关";
+
+            ResetAgvMoveGrid();
+            ResetAgvDetailPanel();
+            MessageBox.Show("关闭串口成功！");
         }
 
-        public void AGVClear()
+        // ─────────────────────────────────────────────────────────────────
+        //  串口轮询回调
+        // ─────────────────────────────────────────────────────────────────
+
+        private void OnPortPollTick()
         {
-            foreach (Thread item in MainInfo.GetThreads)
+            Dispatcher.Invoke(() =>
             {
-                item.Abort();
+                RefreshPortStatusGrid();
+                RefreshAgvMoveGrid();
+            });
+        }
+
+        private void RefreshPortStatusGrid()
+        {
+            int idx = 0;
+            void Set(int i, object v) => ((DataRowView)TabSerialPortData.Items[i])[1] = v;
+
+            for (int i = 0; i < PortInfo.AGVCom.Count; i++, idx += 4)
+            {
+                Set(idx, PortInfo.AGVCom[i]);
+                Set(idx + 1, PortInfo.Baud[i]);
+                Set(idx + 2, PortInfo.agv[i]);
+                Set(idx + 3, MainInfo.listPtr[i].ToInt32() == 0 ? "关闭" : "打开");
             }
-            MainInfo.GetThreads.Clear();
-
-            MainInfo.listAgvDll.Clear(); //清空AGV管理对象
-            MainInfo.listPtr.Clear();  //清空串口返回数据
-            MainInfo.carStatusList.Clear(); //清空所有AGV状态对象
-            MainInfo.agvNo.Clear();  //清空所有AGV
-        }
-
-        /// <summary>
-        /// 清空所有串口数据
-        /// </summary>
-        public void Empty()
-        {
-            PortInfo.buttonCom.Clear();
-            PortInfo.buttonBaud.Clear();
-            PortInfo.buttonStr.Clear();
-
-            PortInfo.chargeCom.Clear();
-            PortInfo.chargeBaud.Clear();
-            PortInfo.chargeStr.Clear();
-
-            PortInfo.AGVCom.Clear();
-            PortInfo.Baud.Clear();
-            PortInfo.agv.Clear();
-        }
-
-        /// <summary>
-        /// 判断AGV状态是否存在
-        /// </summary>
-        /// <param name="AgvNum"></param>
-        /// <returns></returns>
-        public CarStatus AgcCarExists(int AgvNum)
-        {
-            foreach (int item in MainInfo.carStatusList.Keys.ToArray())
+            for (int i = 0; i < PortInfo.buttonCom.Count; i++, idx += 4)
             {
-                if (AgvNum.Equals(item))
-                {
-                    return MainInfo.carStatusList[item];
-                }
+                Set(idx, PortInfo.buttonCom[i]); Set(idx + 1, PortInfo.buttonBaud[i]);
+                Set(idx + 2, PortInfo.buttonStr[i]); Set(idx + 3, "关闭");
+                SetCellColor(TabSerialPortData, idx + 3, Brushes.Red);
             }
-            return null;
-        }
-
-        /// <summary>
-        /// AGV信息选择查询
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void TabAgvMoveData_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Released)
+            for (int i = 0; i < PortInfo.chargeCom.Count; i++, idx += 4)
             {
-                if (TabAgvMoveData.SelectedItems.Count > 0)
-                {
-                    selAgv = ((DataRowView)TabAgvMoveData.SelectedItem)[1].ToString();
-                }
+                Set(idx, PortInfo.chargeCom[i]); Set(idx + 1, PortInfo.chargeBaud[i]);
+                Set(idx + 2, PortInfo.chargeStr[i]); Set(idx + 3, "关闭");
+                SetCellColor(TabSerialPortData, idx + 3, Brushes.Red);
             }
         }
 
-        #endregion ==========串口打开关闭=========
-
-        //public void LogWrite(string msg)
-        //{
-        //    this.Dispatcher.Invoke(new Action<string>(s =>
-        //    {
-        //        Log.Text += (s + "\n");
-        //    }), msg);
-        //}
-
-        /// <summary>
-        /// 退出
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Close_Click(object sender, RoutedEventArgs e)
+        private void RefreshAgvMoveGrid()
         {
-            AGVClear();
-            Application.Current.Shutdown();
-        }
-
-        /// <summary>
-        /// 取消窗体关闭
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
-        {
-            e.Cancel = true;
-        }
-
-        /// <summary>
-        /// 运行设置
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OpenMap_Click(object sender, RoutedEventArgs e)
-        {
-            Operation operation = new Operation();
-            operation.ShowDialog();
-        }
-        private string agv_1 = "agv1";
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            AgvStateInterfaceSql.LoadConfiguration();
-            AgvStateInterfaceSql.AddAgvState(2, agv_1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-            MessageBox.Show("数据库调用成功");
-        }
-
-        private void Button_Click_now(object sender, RoutedEventArgs e)
-        {
-            Test test = new Test();
-            test.ShowDialog();
-        }
-
-        private void Button_Click_control(object sender, RoutedEventArgs e)
-        {
-            string hostname = "192.168.137.8";
-            string username = "nvidia";
-            string password = "nvidia";
-
-            if (!string.IsNullOrEmpty(hostname) && !string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+            for (int i = 0; i < TabAgvMoveData.Items.Count; i++)
             {
-                try
-                {
-                    sshClient = new SshClient(hostname, 22, username, password);
-                    sshClient.Connect();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
+                if (MainInfo.carStatusList.Count == 0) break;
+                int agvNum = Convert.ToInt32(((DataRowView)TabAgvMoveData.Items[i])[1]);
+                CarStatus car = PortService.FindCarStatus(agvNum);
+                if (car == null) continue;
+
+                UpdateAgvMoveRow(i, car);
+                if (Convert.ToInt32(_selAgv) == agvNum)
+                    UpdateAgvDetailPanel(car);
             }
         }
 
+        private void UpdateAgvMoveRow(int rowIdx, CarStatus car)
+        {
+            var row = (DataRowView)TabAgvMoveData.Items[rowIdx];
+
+            if (car.errorCode == 0 && car.carNum == 0)
+            { row[0] = "连接中"; SetCheckBox(rowIdx, "checkbox has-error", Brushes.Red); }
+            else if (car.errorCode == 205)
+            { row[0] = "离线"; SetCheckBox(rowIdx, "checkbox has-error", Brushes.Red); }
+            else
+            {
+                row[0] = "在线"; SetCheckBox(rowIdx, "checkbox has-success", Brushes.Green);
+                row[2] = TagCompile.agvSpeed[car.speedNo] + "米/分钟";
+                row[3] = car.agvRunRight ? "右转中" : car.agvRunLeft ? "左转中" : "直行";
+                row[4] = car.agvRunDirection ? "正向" : "反向";
+                row[5] = car.agvHookUP ? "上升" : "下降";
+                row[6] = string.IsNullOrEmpty(car.rfidStatus) ? "无" : car.rfidStatus;
+                row[7] = car.programNo;
+                row[8] = car.stepNo;
+            }
+        }
+
+        private void UpdateAgvDetailPanel(CarStatus car)
+        {
+            void Val(int r, object v) => ((DataRowView)TabAgvData.Items[r])[1] = v;
+            void Col(int r, Brush b) => SetCellColor(TabAgvData, r, b);
+            void Status(int r, bool ok, string y, string n) { Val(r, ok ? y : n); Col(r, ok ? Brushes.Green : Brushes.Red); }
+
+            if (car.errorCode == 0 && car.carNum == 0)
+            { Val(0, _selAgv); Val(1, "连接中"); Col(1, Brushes.Green); for (int r = 2; r <= 9; r++) Val(r, ""); }
+            else if (car.errorCode == 205)
+            { Val(0, _selAgv); Val(1, "离线！！！"); Col(1, Brushes.Red); for (int r = 2; r <= 9; r++) Val(r, ""); }
+            else
+            {
+                Val(0, car.carNum); Val(1, "在线"); Col(1, Brushes.Green);
+                Status(2, car.IsRunning, "行进中", "停止");
+                Status(3, car.agvRunReady, "On", "Off");
+                Status(4, car.agvDriverDown, "驱动下降", "驱动上升");
+                Status(5, car.agvLineRead, "正常", "脱轨");
+                Val(6, car.pbsArea);
+                Val(7, car.powerCurrentF + "V");
+                Status(8, !car.errorSwitch, "正常", "报警！！！");
+                Val(9, Error.errorStr(car.errorCode));
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  重置网格
+        // ─────────────────────────────────────────────────────────────────
+
+        private void ResetAgvMoveGrid()
+        {
+            for (int i = 0; i < TabAgvMoveData.Items.Count; i++)
+            {
+                ((DataRowView)TabAgvMoveData.Items[i])[0] = "离线";
+                for (int s = 2; s < TabAgvMoveData.Columns.Count; s++)
+                    ((DataRowView)TabAgvMoveData.Items[i])[s] = "";
+                SetCheckBox(i, "checkbox has-error", Brushes.Red);
+            }
+        }
+
+        private void ResetAgvDetailPanel()
+        {
+            for (int r = 0; r <= 9; r++)
+                ((DataRowView)TabAgvData.Items[r])[1] = "";
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  MQTT / AGV 下拉框
+        // ─────────────────────────────────────────────────────────────────
+
+        private void RefreshAgvDropdown()
+        {
+            AgvSelectComboBox.ItemsSource = null;
+            AgvSelectComboBox.ItemsSource = MqttConnectionManager.MqttClients.Keys.ToList();
+            if (!string.IsNullOrEmpty(MqttConnectionManager.CurrentAddress))
+                AgvSelectComboBox.SelectedItem = MqttConnectionManager.CurrentAddress;
+        }
 
         private void AgvSelectComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (AgvSelectComboBox.SelectedItem is string selectedAddress)
+            if (AgvSelectComboBox.SelectedItem is string addr)
             {
-                MqttConnectionManager.SetCurrent(selectedAddress);
-                GlobalData.UpdateAgvInfo("AGV", selectedAddress); // 
-                GlobalDisplayData.UpdateDisplayInfo(MqttConnectionManager.CurrentAddress, "AGV", selectedAddress);
+                MqttConnectionManager.SetCurrent(addr);
+                GlobalData.UpdateAgvInfo("AGV", addr);
+                GlobalDisplayData.UpdateDisplayInfo(addr, "AGV", addr);
             }
         }
+
+        private void TabAgvMoveData_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Released && TabAgvMoveData.SelectedItems.Count > 0)
+                _selAgv = ((DataRowView)TabAgvMoveData.SelectedItem)[1].ToString();
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  【新增】TabAgvInfo 右键菜单：连接 / 断开
+        //  替换原来的单击重连逻辑
+        // ─────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// 启动小车（新加测试）
+        /// 动态构建右键菜单并挂到 TabAgvInfo。
+        /// 在构造函数中调用一次即可。
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void Button_Click_travel(object sender, RoutedEventArgs e)
+        private void BuildTabAgvInfoContextMenu()
         {
-            if (sshClient != null && sshClient.IsConnected)
+            var menu = new ContextMenu();
+
+            var connectItem = new MenuItem { Header = "连接" };
+            connectItem.Click += TabAgvInfo_ContextMenu_Connect_Click;
+
+            var disconnectItem = new MenuItem { Header = "断开连接" };
+            disconnectItem.Click += TabAgvInfo_ContextMenu_Disconnect_Click;
+
+            menu.Items.Add(connectItem);
+            menu.Items.Add(disconnectItem);
+
+            TabAgvInfo.ContextMenu = menu;
+
+            // 右键打开菜单前，先确认有行被选中；没有选中行则阻止弹出
+            TabAgvInfo.ContextMenuOpening += (s, e) =>
             {
-                try
-                {
-                    string command = "source /opt/ros/melodic/setup.bash && " +
-                                     "source /home/nvidia/agv_ros1/devel/setup.bash && source /home/nvidia/cartographer_ros1/install_isolated/setup.bash && " +
-                                     "export ROS_HOSTNAME=localhost && export ROS_MASTER_URI=http://localhost:11311 &&" +
-                                     "roslaunch lqr_track lqr_control.launch ";
+                if (TabAgvInfo.SelectedItem == null)
+                    e.Handled = true;
+            };
+        }
 
-                    string result = await Task.Run(() => ExecuteRemoteCommand(command));
+        /// <summary>右键 → 连接：对选中行的 AGV 重新建立 MQTT 连接</summary>
+        private async void TabAgvInfo_ContextMenu_Connect_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(TabAgvInfo.SelectedItem is DataRowView row)) return;
 
-                    Console.WriteLine("Command output:");
-                    Console.WriteLine(result);
-                    MessageBox.Show(result);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
-                finally
-                {
-                    sshClient.Dispose();
-                    sshClient.Disconnect();
-                }
-            }
-            else
+            string address = row["AGV"].ToString();
+            if (string.IsNullOrWhiteSpace(address)) return;
+
+            // 已连接则提示，不重复操作
+            if (MqttConnectionManager.MqttClients.TryGetValue(address, out var existing)
+                && existing.IsConnected)
             {
-                MessageBox.Show("Not connected");
+                MessageBox.Show($"{address} 已处于连接状态。", "提示",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
             }
-        }
 
-        private async void TabAgvInfo_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (TabAgvInfo.SelectedItem is DataRowView row)
+            try
             {
-                string address = row["AGV"].ToString();
-                string status = row["网络状态"].ToString();
-
-                if (status == "未连接")
+                // 找到当前打开的地图窗口（需要 mainPanel）
+                var mapWin = Application.Current.Windows.OfType<MainWindow>()
+                             .FirstOrDefault(w => w.IsVisible);
+                if (mapWin == null)
                 {
-                    if (MessageBox.Show($"是否重新连接 {address}？", "确认", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-                    {
-                        try
-                        {
-                            // 获取当前打开的地图窗口实例
-                            var mapWindow = Application.Current.Windows
-                                               .OfType<MainWindow>()
-                                               .FirstOrDefault(w => w.IsVisible);
-
-                            if (mapWindow != null)
-                            {
-                                var panel = mapWindow.mainPanel;
-                                await MqttConnectionManager.ReconnectAsync(address, 1883, panel, this.Dispatcher, 1.2, 0.8);
-                            }
-                            else
-                            {
-                                MessageBox.Show("请先打开地图页面。");
-                            }
-                            MessageBox.Show($"{address} 重连成功");
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"重连失败：{ex.Message}");
-                        }
-                    }
+                    MessageBox.Show("请先打开地图页面。", "提示",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
+
+                // 断开旧连接并重建新 wrapper，保证 LatestClient 指向有效对象
+                if (MqttConnectionManager.MqttClients.TryGetValue(address, out var old))
+                    await old.DisconnectAsync();
+
+                var wrapper = new MqttClientWrapper(
+                    mapWin.Dispatcher, address,
+                    MqttConnectionManager.GetStoredLength(address),   // 见下方说明
+                    MqttConnectionManager.GetStoredWidth(address));
+
+                await wrapper.InitializeAsync(address, 1883, mapWin.mainPanel);
+
+                // 更新连接池 + 设为当前，保证 LatestClient 可用
+                MqttConnectionManager.AddClient(address, wrapper);
+                MqttConnectionManager.SetCurrent(address);
+                GlobalData.UpdateAgvInfo("AGV", address);
+                GlobalDisplayData.UpdateDisplayInfo(address, "AGV", address);
+
+                // 连接成功后锁定地图编辑区
+                mapWin.LockEditing();
+
+                MessageBox.Show($"{address} 连接成功。", "成功",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
-        }
-
-
-
-        private string ExecuteRemoteCommand(string command)
-        {
-            using (var cmd = sshClient.CreateCommand(command))
+            catch (Exception ex)
             {
-                return cmd.Execute();
+                MessageBox.Show($"连接失败：{ex.Message}", "错误",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void TabAgvData_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        /// <summary>右键 → 断开连接：断开选中行 AGV，断开后若全部断开则地图编辑解锁</summary>
+        private async void TabAgvInfo_ContextMenu_Disconnect_Click(object sender, RoutedEventArgs e)
         {
+            if (!(TabAgvInfo.SelectedItem is DataRowView row)) return;
 
+            string address = row["AGV"].ToString();
+            if (string.IsNullOrWhiteSpace(address)) return;
+
+            if (!MqttConnectionManager.MqttClients.TryGetValue(address, out var client)
+                || !client.IsConnected)
+            {
+                MessageBox.Show($"{address} 当前未连接。", "提示",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (MessageBox.Show($"确认断开 {address} 的连接？", "确认",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                // 调用 Manager 统一断开（内部会触发 AllClientsDisconnected 事件）
+                await MqttConnectionManager.DisconnectClientAsync(address);
+
+                MessageBox.Show($"{address} 已断开。", "成功",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"断开失败：{ex.Message}", "错误",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void TabAgvMoveData_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
+        // ─────────────────────────────────────────────────────────────────
+        //  UI 辅助
+        // ─────────────────────────────────────────────────────────────────
 
+        private void SetCellColor(DataGrid grid, int rowIdx, Brush brush)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var cell = grid.Columns.Count > 1
+                    ? grid.Columns[1].GetCellContent(grid.Items[rowIdx]) as TextBlock
+                    : null;
+                if (cell != null) cell.Foreground = brush;
+            });
         }
 
-        private void CarStation_Click(object sender, RoutedEventArgs e)
+        private void SetCheckBox(int rowIdx, string styleName, Brush color)
         {
-            var win = new CarListWindow();
-            win.ShowDialog();
+            Dispatcher.Invoke(() =>
+            {
+                var col = TabAgvMoveData.Columns[0] as DataGridTemplateColumn;
+                var elem = col?.GetCellContent(TabAgvMoveData.Items[rowIdx]);
+                if (elem == null) return;
+                var ck = col.CellTemplate.FindName("CheckBoxDN", elem) as CheckBox;
+                if (ck == null) return;
+                ck.Foreground = color;
+                ck.Style = (Style)FindResource(styleName);
+            });
         }
 
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
-        {
+        // ─────────────────────────────────────────────────────────────────
+        //  空实现（占位）
+        // ─────────────────────────────────────────────────────────────────
+        private void TabAgvData_SelectionChanged(object s, SelectionChangedEventArgs e) { }
+        private void TabAgvMoveData_SelectionChanged(object s, SelectionChangedEventArgs e) { }
+        private void MenuItem_Click(object s, RoutedEventArgs e) { }
 
-        }
+        // 原来的单击重连处理——保留方法名避免 XAML 编译错误，但逻辑已移至右键菜单
+        // 如果 XAML 里 TabAgvInfo 仍绑定了 MouseLeftButtonUp="TabAgvInfo_MouseLeftButtonUp"，
+        // 保留此空实现即可；也可直接删除 XAML 中该绑定。
+        private void TabAgvInfo_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { }
     }
 }

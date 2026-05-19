@@ -34,7 +34,7 @@ namespace AGVManagement.Mqtt
         public static void UpdateDisplayInfo(string agvAddress, string column, string value)
         {
             lock (_lock)
-            {
+            {   
                 try
                 {
                     if (!AgvData.Columns.Contains(column)) return;

@@ -88,3 +88,16 @@ E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.BLL\obj
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.csproj.Up2Date
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.dll
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.pdb
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\AGV.BLL.dll
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\AGV.BLL.pdb
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\AGV.DAL.dll
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\AGV.Models.dll
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\AGVDLL.dll
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\AGV.DAL.pdb
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\AGV.Models.pdb
+E:\AGVtest\AGV-master\AGV.BLL\bin\x86\Debug\MySql.Data.xml
+E:\AGVtest\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.csproj.AssemblyReference.cache
+E:\AGVtest\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.csproj.CoreCompileInputs.cache
+E:\AGVtest\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.csproj.Up2Date
+E:\AGVtest\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.dll
+E:\AGVtest\AGV-master\AGV.BLL\obj\x86\Debug\AGV.BLL.pdb

@@ -46,3 +46,13 @@ E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.Models\
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.csproj.Up2Date
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.dll
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.pdb
+E:\AGVtest\AGV-master\AGV.Models\bin\x86\Debug\AGV.Models.dll
+E:\AGVtest\AGV-master\AGV.Models\bin\x86\Debug\AGV.Models.pdb
+E:\AGVtest\AGV-master\AGV.Models\bin\x86\Debug\AGVDLL.dll
+E:\AGVtest\AGV-master\AGV.Models\bin\x86\Debug\MQTTnet.dll
+E:\AGVtest\AGV-master\AGV.Models\bin\x86\Debug\MQTTnet.xml
+E:\AGVtest\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.csproj.AssemblyReference.cache
+E:\AGVtest\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.csproj.CoreCompileInputs.cache
+E:\AGVtest\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.csproj.Up2Date
+E:\AGVtest\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.dll
+E:\AGVtest\AGV-master\AGV.Models\obj\x86\Debug\AGV.Models.pdb

@@ -31,3 +31,14 @@ E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.DAL\obj
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.csproj.Up2Date
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.dll
 E:\ATF\code\code20230828\AGV-master\AGV-master\AGV-master\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.pdb
+E:\AGVtest\AGV-master\AGV.DAL\bin\x86\Release\AGV.DAL.dll
+E:\AGVtest\AGV-master\AGV.DAL\bin\x86\Release\AGV.DAL.pdb
+E:\AGVtest\AGV-master\AGV.DAL\bin\x86\Release\AGV.Models.dll
+E:\AGVtest\AGV-master\AGV.DAL\bin\x86\Release\AGVDLL.dll
+E:\AGVtest\AGV-master\AGV.DAL\bin\x86\Release\AGV.Models.pdb
+E:\AGVtest\AGV-master\AGV.DAL\bin\x86\Release\MySql.Data.xml
+E:\AGVtest\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.csproj.AssemblyReference.cache
+E:\AGVtest\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.csproj.CoreCompileInputs.cache
+E:\AGVtest\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.csproj.Up2Date
+E:\AGVtest\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.dll
+E:\AGVtest\AGV-master\AGV.DAL\obj\x86\Release\AGV.DAL.pdb
