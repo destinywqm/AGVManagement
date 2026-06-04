@@ -62,10 +62,13 @@ namespace AGVManagement.Models
         public int lift { get; set; }
         public bool rotate { get; set; }
         public double obs_avoidance { get; set; }
+        public string qr_code { get; set; }  // 新增
+        public int tag_id { get; set; }  // ← 新增
 
         public NewPointStraightWithAngle(int id, double x, double y,
             double angleToNext, double v, double a,
-            int liftStation, bool rotateNow, double obsAvoidance)
+            int liftStation, bool rotateNow, double obsAvoidance,
+            string qrCode = "", int tag_id = 0)
         {
             ID = id; X = x; Y = y;
             angle = angleToNext;
@@ -73,6 +76,8 @@ namespace AGVManagement.Models
             lift = liftStation;
             rotate = rotateNow;
             obs_avoidance = obsAvoidance;
+            qr_code = qrCode;
+            this.tag_id = tag_id;
         }
     }
 
@@ -93,11 +98,15 @@ namespace AGVManagement.Models
     /// <summary>地图上的 AGV 小车（UI 绘制 + 位置更新）</summary>
     public class AgvCar
     {
-        public Rectangle Shape { get; private set; }
+        //public Rectangle Shape { get; private set; }
+        public FrameworkElement Shape { get; private set; }
         private readonly string _address;
         private readonly Point _origin;
         private readonly double _width;
         private readonly double _height;
+
+        // 中心点
+        public Ellipse CenterMark { get; private set; }
 
         public AgvCar(string address, Point origin, double width, double height)
         {
@@ -120,14 +129,62 @@ namespace AGVManagement.Models
             brush.GradientStops.Add(new GradientStop(Colors.Blue, 0.7));
             brush.GradientStops.Add(new GradientStop(Colors.Blue, 1));
 
-            Shape = new Rectangle
+            //Shape = new Rectangle
+            var carBody = new Rectangle
             {
                 Width = _width,
                 Height = _height,
                 Stroke = Brushes.Black,
                 StrokeThickness = 1,
-                Fill = brush
+                Fill = brush,
+                Opacity = 0.65
             };
+
+            const double crossSize = 6;
+            const double dotRadius = 2.5;
+            double centerX = _width / 2;
+            double centerY = _height / 2;
+
+            var container = new Canvas
+            {
+                Width = _width,
+                Height = _height,
+                IsHitTestVisible = false
+            };
+
+            container.Children.Add(carBody);
+            container.Children.Add(new Line
+            {
+                X1 = centerX - crossSize,
+                Y1 = centerY,
+                X2 = centerX + crossSize,
+                Y2 = centerY,
+                Stroke = Brushes.Yellow,
+                StrokeThickness = 1.5
+            });
+            container.Children.Add(new Line
+            {
+                X1 = centerX,
+                Y1 = centerY - crossSize,
+                X2 = centerX,
+                Y2 = centerY + crossSize,
+                Stroke = Brushes.Yellow,
+                StrokeThickness = 1.5
+            });
+
+            var centerDot = new Ellipse
+            {
+                Width = dotRadius * 2,
+                Height = dotRadius * 2,
+                Fill = Brushes.Yellow,
+                Stroke = Brushes.Black,
+                StrokeThickness = 0.8
+            };
+            Canvas.SetLeft(centerDot, centerX - dotRadius);
+            Canvas.SetTop(centerDot, centerY - dotRadius);
+            container.Children.Add(centerDot);
+
+            Shape = container;
             Canvas.SetLeft(Shape, _origin.X - _width / 2);
             Canvas.SetTop(Shape, _origin.Y - _height / 2);
         }

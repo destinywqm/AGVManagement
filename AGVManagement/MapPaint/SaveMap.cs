@@ -105,11 +105,11 @@ namespace AGVManagement.MapPaint
         /// <param name="type"></param>
         private void SaveTag(string CreateTime, bool type)
         {
-            string sqlTag = string.Format("DROP TABLE IF EXISTS agv.`tag{0}`;CREATE TABLE IF NOT EXISTS agv.`tag{0}` ( `ID` int(10) NOT NULL AUTO_INCREMENT, `TagNo` varchar(50) DEFAULT NULL COMMENT 'tag号（地图记录用）', `TagName` varchar(50) DEFAULT NULL COMMENT 'tag名称', `X` double DEFAULT NULL COMMENT 'X（米）', `Y` double DEFAULT NULL COMMENT 'Y（米）', `NextTag` varchar(10) DEFAULT NULL COMMENT '后置tag', `NextLeftTag` varchar(10) DEFAULT NULL COMMENT '左后置tag', `NextRightTag` varchar(10) DEFAULT NULL COMMENT '右后置tag', `PreTag` varchar(10) DEFAULT NULL COMMENT '前置tag', `PreLeftTag` varchar(10) DEFAULT NULL COMMENT '左前置tag', `PreRightTag` varchar(10) DEFAULT NULL COMMENT '右前置tag', `Speed` int(10) DEFAULT NULL COMMENT '正向速度', `SpeedRev` int(10) DEFAULT NULL COMMENT '反向速度', `StopTime` int(10) DEFAULT NULL COMMENT '单位为s', `Pbs` int(10) DEFAULT NULL COMMENT '障碍物扫描（正向）', `PbsRev` int(10) DEFAULT NULL COMMENT '障碍物扫描（反向）', `TagTerminal` VARCHAR(50) DEFAULT NULL COMMENT '0为非终结点，1为终结点，2为辅助点', PRIMARY KEY(`ID`)) ENGINE = InnoDB DEFAULT CHARSET = utf8 COMMENT = '取名为tag+UTC时间，如map1234567890'; ", CreateTime.ToString());
+            string sqlTag = string.Format("DROP TABLE IF EXISTS agv.`tag{0}`;CREATE TABLE IF NOT EXISTS agv.`tag{0}` ( `ID` int(10) NOT NULL AUTO_INCREMENT, `TagNo` varchar(50) DEFAULT NULL COMMENT 'tag号（地图记录用）', `TagName` varchar(50) DEFAULT NULL COMMENT 'tag名称', `X` double DEFAULT NULL COMMENT 'X（米）', `Y` double DEFAULT NULL COMMENT 'Y（米）', `NextTag` varchar(10) DEFAULT NULL COMMENT '后置tag', `NextLeftTag` varchar(10) DEFAULT NULL COMMENT '左后置tag', `NextRightTag` varchar(10) DEFAULT NULL COMMENT '右后置tag', `PreTag` varchar(10) DEFAULT NULL COMMENT '前置tag', `PreLeftTag` varchar(10) DEFAULT NULL COMMENT '左前置tag', `PreRightTag` varchar(10) DEFAULT NULL COMMENT '右前置tag', `Speed` int(10) DEFAULT NULL COMMENT '正向速度', `SpeedRev` int(10) DEFAULT NULL COMMENT '反向速度', `StopTime` int(10) DEFAULT NULL COMMENT '单位为s', `Pbs` int(10) DEFAULT NULL COMMENT '障碍物扫描（正向）', `PbsRev` int(10) DEFAULT NULL COMMENT '障碍物扫描（反向）', `TagTerminal` VARCHAR(50) DEFAULT NULL COMMENT '0为非终结点，1为终结点，2为辅助点', `QrCode` VARCHAR(100) DEFAULT NULL COMMENT '二维码ID', PRIMARY KEY(`ID`)) ENGINE = InnoDB DEFAULT CHARSET = utf8 COMMENT = '取名为tag+UTC时间，如map1234567890'; ", CreateTime.ToString());
             string sqlWidget = string.Format("DROP TABLE IF EXISTS agv.`widget{0}`;CREATE TABLE IF NOT EXISTS agv.`widget{0}` ( `ID` int(10) NOT NULL AUTO_INCREMENT, `WidgetNo` varchar(50) DEFAULT NULL COMMENT '控件编号', `Name` varchar(50) DEFAULT NULL COMMENT '文字内容', `X` double DEFAULT NULL COMMENT 'X坐标位置（米）', `Y` double DEFAULT NULL COMMENT 'Y坐标位置（米）', `Width` double DEFAULT NULL COMMENT '宽度（米）', `Height` double DEFAULT NULL COMMENT '高度（米）', `FontSize` int(11) DEFAULT NULL COMMENT '字体大小', `FontPosition` varchar(50) DEFAULT NULL COMMENT '字体位置（16进制）', `ForeColor` varchar(50) DEFAULT NULL COMMENT '字体颜色（16进制）', `BackColor` varchar(50) DEFAULT NULL COMMENT '背景颜色（16进制）', `BorderColor` varchar(50) DEFAULT NULL COMMENT '边框颜色（16进制）', PRIMARY KEY(`ID`)) ENGINE = InnoDB DEFAULT CHARSET = utf8; ", CreateTime.ToString());
             string sqlLine = string.Format("DROP TABLE IF EXISTS agv.`line{0}`;CREATE TABLE IF NOT EXISTS agv.`line{0}` ( `ID` int(10) NOT NULL AUTO_INCREMENT, `StartX` double DEFAULT NULL COMMENT '起始X坐标位置（米）', `StartY` double DEFAULT NULL COMMENT '起始Y坐标位置（米）', `EndX` double DEFAULT NULL COMMENT '终点X坐标位置（米）', `EndY` double DEFAULT NULL COMMENT '终点Y坐标位置（米）', `LineStyel` int(11) DEFAULT NULL COMMENT 'Line类型：1为直线，2为折线', `Tag1` varchar(50) DEFAULT NULL, `Tag2` varchar(50) DEFAULT NULL, PRIMARY KEY(`ID`)) ENGINE = InnoDB DEFAULT CHARSET = utf8 ROW_FORMAT = COMPACT; ", CreateTime.ToString());
             string sqlDevice = string.Format("CREATE TABLE IF NOT EXISTS agv.`device{0}` ( `ID` int(10) NOT NULL AUTO_INCREMENT, `Com` int(11) DEFAULT NULL, `Baud` int(11) DEFAULT NULL, `Agv` varchar(50) DEFAULT NULL,  PRIMARY KEY(`ID`)) ENGINE = InnoDB DEFAULT CHARSET = utf8 ROW_FORMAT = COMPACT; ", CreateTime.ToString());
-            string sqlRoute = string.Format("CREATE TABLE IF NOT EXISTS agv.`route{0}` ( `ID` int(10) NOT NULL AUTO_INCREMENT, `Program` int(11) DEFAULT NULL COMMENT '线路对应的Program', `Name` varchar(50) DEFAULT NULL COMMENT '线路名称', `CreateTime` bigint(20) NOT NULL DEFAULT '0' COMMENT '线路的创建时间', `Tag` varchar(500) DEFAULT NULL COMMENT 'tag序列', `Speed` varchar(500) DEFAULT NULL COMMENT 'tag速度序列（单位m/min)', `Stop` varchar(500) DEFAULT NULL COMMENT '停止列（单位为s）', `Turn` varchar(500) DEFAULT NULL COMMENT '转弯列，0无动作，1左转，2右转，3取消转弯', `Direction` varchar(500) DEFAULT NULL COMMENT '前进列，后退，0前进，1后退', `Pbs` varchar(500) DEFAULT NULL COMMENT 'Pbs列', `revPbs` varchar(500) DEFAULT NULL COMMENT '反向Pbs列', `Hook` varchar(500) DEFAULT NULL COMMENT 'hook列 0下降，1升起', `ChangeProgram` varchar(500) DEFAULT NULL COMMENT '修改Program', `AGV` varchar(500) DEFAULT NULL COMMENT '线路包括的agv', PRIMARY KEY(`ID`)) ENGINE = InnoDB AUTO_INCREMENT = 7 DEFAULT CHARSET = utf8 ROW_FORMAT = COMPACT; ", CreateTime.ToString());
+            string sqlRoute = string.Format("CREATE TABLE IF NOT EXISTS agv.`route{0}` ( `ID` int(10) NOT NULL AUTO_INCREMENT, `Program` int(11) DEFAULT NULL COMMENT '线路对应的Program', `Name` varchar(50) DEFAULT NULL COMMENT '线路名称', `CreateTime` bigint(20) NOT NULL DEFAULT '0' COMMENT '线路的创建时间', `Tag` varchar(500) DEFAULT NULL COMMENT 'tag序列', `Speed` varchar(500) DEFAULT NULL COMMENT 'tag速度序列（单位m/min)', `Stop` varchar(500) DEFAULT NULL COMMENT '停止列（单位为s）', `Turn` varchar(500) DEFAULT NULL COMMENT '转弯列，0无动作，1左转，2右转，3取消转弯', `Direction` varchar(500) DEFAULT NULL COMMENT '前进列，后退，0前进，1后退', `Pbs` varchar(500) DEFAULT NULL COMMENT 'Pbs列', `revPbs` varchar(500) DEFAULT NULL COMMENT '反向Pbs列', `Hook` varchar(500) DEFAULT NULL COMMENT 'hook列 0下降，1升起', `ChangeProgram` varchar(500) DEFAULT NULL COMMENT '修改Program', `AGV` varchar(500) DEFAULT NULL COMMENT '线路包括的agv', `UseQrCode` varchar(500) DEFAULT NULL COMMENT '是否启用二维码序列(0/1)', PRIMARY KEY(`ID`)) ENGINE = InnoDB AUTO_INCREMENT = 7 DEFAULT CHARSET = utf8 ROW_FORMAT = COMPACT; ", CreateTime.ToString());
             DataTable data = null;
             if (!type)
             {
@@ -120,26 +120,34 @@ namespace AGVManagement.MapPaint
             //暂存一下坐标之前的逻辑
             foreach (Label lb in MapInstrument.valuePairs.Values)
             {
-                string strTag = string.Format("INSERT INTO agv.`tag{0}` (`TagNo`, `TagName`, `X`, `Y`, `NextTag`, `NextLeftTag`, `NextRightTag`, `PreTag`, `PreLeftTag`, `PreRightTag`, `Speed`, `SpeedRev`, `StopTime`, `Pbs`, `PbsRev`, `TagTerminal`) VALUES ", CreateTime.ToString());
-                sqlTagd.Append(strTag);
-                sqlTagd.Append("('");
-                sqlTagd.Append("TA" + lb.Tag);
-                sqlTagd.Append("','");
-                sqlTagd.Append(lb.Tag);
-                sqlTagd.Append("',");
-                sqlTagd.Append((((lb.Margin.Left + 19) / Painting.siseWin) /10));
-                sqlTagd.Append(",");
-                sqlTagd.Append((((lb.Margin.Top + 11.5) / Painting.siseWin) / 10));
+                StringBuilder sqlOne = new StringBuilder(); // ← 每个 tag 单独一个 StringBuilder
+                string strTag = string.Format(
+                    "INSERT INTO agv.`tag{0}` (`TagNo`,`TagName`,`X`,`Y`," +
+                    "`NextTag`,`NextLeftTag`,`NextRightTag`,`PreTag`,`PreLeftTag`,`PreRightTag`," +
+                    "`Speed`,`SpeedRev`,`StopTime`,`Pbs`,`PbsRev`,`TagTerminal`,`QrCode`) VALUES ",
+                    CreateTime.ToString());
+                sqlOne.Append(strTag);
+                sqlOne.Append("('");
+                sqlOne.Append("TA" + lb.Tag);
+                sqlOne.Append("','");
+                sqlOne.Append(lb.Tag);
+                sqlOne.Append("',");
+                sqlOne.Append((((lb.Margin.Left + 19) / Painting.siseWin) / 10));
+                sqlOne.Append(",");
+                sqlOne.Append((((lb.Margin.Top + 11.5) / Painting.siseWin) / 10));
                 for (int i = 0; i < 6; i++)
-                {
-                    sqlTagd.Append(",'N/A'");
-                }
-                for (int i = 0; i < 6; i++)
-                {
-                    sqlTagd.Append(",0");
-                }
-                sqlTagd.Append(")");
-                sqlTagd.Append(";");
+                    sqlOne.Append(",'N/A'");
+                for (int i = 0; i < 5; i++)
+                    sqlOne.Append(",0");
+                sqlOne.Append(",'0'");
+                string existingQr = !type
+                    ? (tagInfo.GetQrCode(CreateTime, Convert.ToInt32(lb.Tag)) ?? "")
+                    : "";
+                sqlOne.Append(",'");
+                sqlOne.Append(existingQr.Replace("'", "\\'"));
+                sqlOne.Append("'");
+                sqlOne.Append(")");  // ← 注意这里不加分号，单条 SQL 不需要
+                Sql.Add(sqlOne.ToString()); // ← 每条单独 Add
             }
             // 遍历逻辑坐标字典，改为从逻辑坐标保存
             /*foreach (var kvp in MapInstrument.tagLogicPositions)
@@ -163,19 +171,31 @@ namespace AGVManagement.MapPaint
                 for (int i = 0; i < 6; i++)
                 {
                     sqlTagd.Append(",'N/A'");
-                }
+                }   
                 for (int i = 0; i < 6; i++)
                 {
                     sqlTagd.Append(",0");
                 }
                 sqlTagd.Append(");");
             }*/
-            Sql.Add(sqlTagd.ToString());
+            //Sql.Add(sqlTagd.ToString());
             if (data != null)
             {
                 foreach (DataRow Dt in data.Rows)
                 {
-                    string sql = string.Format("UPDATE agv.`tag{0}` SET `NextTag` = '{1}',`NextLeftTag` = '{2}', `NextRightTag` = '{3}',`PreTag` = '{4}',`PreLeftTag` = '{5}',`PreRightTag` = '{6}',`Speed` = '{7}',`SpeedRev` = '{8}',`StopTime` = '{9}',`Pbs` = '{10}',`PbsRev` = '{11}', `TagTerminal` = '{12}' WHERE TagName = '{13}';\n", CreateTime, Dt[5].ToString(), Dt[6].ToString(), Dt[7].ToString(), Dt[8].ToString(), Dt[9].ToString(), Dt[10].ToString(), Dt[11].ToString(), Dt[12].ToString(), Dt[13].ToString(), Dt[14].ToString(), Dt[15].ToString(), Dt[16].ToString(), Dt[2].ToString());
+                    string sql = string.Format(
+    "UPDATE agv.`tag{0}` SET " +
+    "`NextTag`='{1}',`NextLeftTag`='{2}',`NextRightTag`='{3}'," +
+    "`PreTag`='{4}',`PreLeftTag`='{5}',`PreRightTag`='{6}'," +
+    "`Speed`='{7}',`SpeedRev`='{8}',`StopTime`='{9}'," +
+    "`Pbs`='{10}',`PbsRev`='{11}',`TagTerminal`='{12}' " +
+    "WHERE TagName='{13}';\n",
+    CreateTime,
+    Dt["NextTag"], Dt["NextLeftTag"], Dt["NextRightTag"],
+    Dt["PreTag"], Dt["PreLeftTag"], Dt["PreRightTag"],
+    Dt["Speed"], Dt["SpeedRev"], Dt["StopTime"],
+    Dt["Pbs"], Dt["PbsRev"], Dt["TagTerminal"],
+    Dt["TagName"]);
                     Sql.Add(sql);
                 }
             }

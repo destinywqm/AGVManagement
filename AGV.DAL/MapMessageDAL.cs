@@ -174,12 +174,23 @@ namespace AGV.DAL
         /// <param name="Agv"></param>
         /// <param name="ChangeProgram"></param>
         /// <returns></returns>
-        public bool InsertRoute(string Program, string RouteName, long CreateTime, long MapTime, string Tag, string Speed, string Stop, string Turn, string Dire, string Pbs, string Hook, string Agv, string ChangeProgram)
+        //public bool InsertRoute(string Program, string RouteName, long CreateTime, long MapTime, string Tag, string Speed, string Stop, string Turn, string Dire, string Pbs, string Hook, string Agv, string ChangeProgram)
+        //{
+        //    string sql = string.Format("INSERT INTO agv.`route{0}` (`Program`, `Name`, `CreateTime`, `Tag`, `Speed`, `Stop`, `Turn`, `Direction`, `Pbs`, `Hook`, `ChangeProgram`, `AGV`)  VALUES ('{1}', '{2}', {3}, '{4}', '{5}', '{6}', '{7}', '{8}', '{9}', '{10}', '{11}', '{12}') ", MapTime, Program, RouteName, CreateTime, Tag, Speed, Stop, Turn, Dire, Pbs, Hook, ChangeProgram, Agv);
+        //    return MySqlHelper.ExecuteNonQuery(sql) > 0 ? true : false;
+        //}
+        public bool InsertRoute(string Program, string RouteName, long CreateTime, long MapTime,
+    string Tag, string Speed, string Stop, string Turn, string Dire,
+    string Pbs, string Hook, string Agv, string ChangeProgram, string UseQrCode = "")
         {
-            string sql = string.Format("INSERT INTO agv.`route{0}` (`Program`, `Name`, `CreateTime`, `Tag`, `Speed`, `Stop`, `Turn`, `Direction`, `Pbs`, `Hook`, `ChangeProgram`, `AGV`)  VALUES ('{1}', '{2}', {3}, '{4}', '{5}', '{6}', '{7}', '{8}', '{9}', '{10}', '{11}', '{12}') ", MapTime, Program, RouteName, CreateTime, Tag, Speed, Stop, Turn, Dire, Pbs, Hook, ChangeProgram, Agv);
-            return MySqlHelper.ExecuteNonQuery(sql) > 0 ? true : false;
+            string sql = string.Format(
+                "INSERT INTO agv.`route{0}` (`Program`,`Name`,`CreateTime`,`Tag`,`Speed`,`Stop`," +
+                "`Turn`,`Direction`,`Pbs`,`Hook`,`ChangeProgram`,`AGV`,`UseQrCode`) " +
+                "VALUES ('{1}','{2}',{3},'{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}')",
+                MapTime, Program, RouteName, CreateTime,
+                Tag, Speed, Stop, Turn, Dire, Pbs, Hook, ChangeProgram, Agv, UseQrCode);
+            return MySqlHelper.ExecuteNonQuery(sql) > 0;
         }
-
         /// <summary>
         /// 更新线路
         /// </summary>
@@ -196,12 +207,23 @@ namespace AGV.DAL
         /// <param name="AgvStr"></param>
         /// <param name="ProgramStr"></param>
         /// <param name="RouteTime"></param>
-        public bool UpdateRoute(long MapTime, int Program, string MapName, string TagStr, string SpeedStr, string StopStr, string TurnStr, string DireStr, string PbsStr, string HookStr, string AgvStr, string ProgramStr)
+        //public bool UpdateRoute(long MapTime, int Program, string MapName, string TagStr, string SpeedStr, string StopStr, string TurnStr, string DireStr, string PbsStr, string HookStr, string AgvStr, string ProgramStr)
+        //{
+        //    string sql = string.Format("UPDATE agv.`route{0}` SET  `Name` = '{1}', `Tag` = '{2}', `Speed` = '{3}', `Stop` = '{4}', `Turn` = '{5}', `Direction` = '{6}', Pbs = '{7}', Hook = '{8}', `AGV` = '{9}', `ChangeProgram` = '{10}'  WHERE Program = {11}", MapTime, MapName, TagStr, SpeedStr, StopStr, TurnStr, DireStr, PbsStr, HookStr, AgvStr, ProgramStr, Program);
+        //    return MySqlHelper.ExecuteNonQuery(sql) > 0 ? true : false;
+        //}
+        public bool UpdateRoute(long MapTime, int Program, string MapName,
+    string TagStr, string SpeedStr, string StopStr, string TurnStr, string DireStr,
+    string PbsStr, string HookStr, string AgvStr, string ProgramStr, string UseQrCode = "")
         {
-            string sql = string.Format("UPDATE agv.`route{0}` SET  `Name` = '{1}', `Tag` = '{2}', `Speed` = '{3}', `Stop` = '{4}', `Turn` = '{5}', `Direction` = '{6}', Pbs = '{7}', Hook = '{8}', `AGV` = '{9}', `ChangeProgram` = '{10}'  WHERE Program = {11}", MapTime, MapName, TagStr, SpeedStr, StopStr, TurnStr, DireStr, PbsStr, HookStr, AgvStr, ProgramStr, Program);
-            return MySqlHelper.ExecuteNonQuery(sql) > 0 ? true : false;
+            string sql = string.Format(
+                "UPDATE agv.`route{0}` SET `Name`='{1}',`Tag`='{2}',`Speed`='{3}',`Stop`='{4}'," +
+                "`Turn`='{5}',`Direction`='{6}',`Pbs`='{7}',`Hook`='{8}'," +
+                "`AGV`='{9}',`ChangeProgram`='{10}',`UseQrCode`='{11}' WHERE Program={12}",
+                MapTime, MapName, TagStr, SpeedStr, StopStr, TurnStr, DireStr,
+                PbsStr, HookStr, AgvStr, ProgramStr, UseQrCode, Program);
+            return MySqlHelper.ExecuteNonQuery(sql) > 0;
         }
-
         public DataTable MapList(string MpName)
         {
             string Sql = "";

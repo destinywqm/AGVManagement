@@ -41,6 +41,9 @@ namespace AGVManagement
         private readonly MapMessageBLL _messageBLL = new MapMessageBLL();
         private readonly TagInfoBLL _tagInfo = new TagInfoBLL();
 
+        private readonly Dictionary<int, Label> _localValuePairs = new Dictionary<int, Label>();
+        private readonly List<WirePointArray> _localWirePointArrays = new List<WirePointArray>();
+
         private double _mpWidth, _mpHeight;
         private long _times;
         private DataTable _dtRoute = new DataTable();
@@ -67,11 +70,11 @@ namespace AGVManagement
 
         private void LoadMapComboBox()
         {
-            MapInstrument.keyValuePairs.Clear();
-            MapInstrument.valuePairs.Clear();
-            MapInstrument.wirePointArrays.Clear();
-            MapInstrument.GetKeyValues.Clear();
-            Painting.siseWin = 1;
+            //MapInstrument.keyValuePairs.Clear();
+            //MapInstrument.valuePairs.Clear();
+            //MapInstrument.wirePointArrays.Clear();
+            //MapInstrument.GetKeyValues.Clear();
+            //Painting.siseWin = 1;
             SliMax.Value = 0;
 
             SubmitPro.IsEnabled = false;
@@ -126,11 +129,14 @@ namespace AGVManagement
             lineRo.SelectedIndex = 0;
 
             // 渲染地图
-            MapInstrument.keyValuePairs.Clear();
-            MapInstrument.valuePairs.Clear();
-            MapInstrument.wirePointArrays.Clear();
-            MapInstrument.GetKeyValues.Clear();
-            Painting.siseWin = 1;
+            //MapInstrument.keyValuePairs.Clear();
+            //MapInstrument.valuePairs.Clear();
+            //MapInstrument.wirePointArrays.Clear();
+            //MapInstrument.GetKeyValues.Clear();
+            //Painting.siseWin = 1;
+            _localValuePairs.Clear();
+            _localWirePointArrays.Clear();
+
             MapIN.Children.Clear();
 
             _mpWidth = Convert.ToDouble(arr[0]) * _manag.Sise;
@@ -140,7 +146,11 @@ namespace AGVManagement
             _times = long.Parse(arr[2]);
             _manag.Times = _times;
             _manag.GetData = EditlineData;
-            _manag.SelectMap(_times, MapIN, true);
+
+
+            _manag.IsolatedValuePairs = _localValuePairs;
+            _manag.IsolatedWirePointArrays = _localWirePointArrays;
+            _manag.SelectMap(_times, MapIN, true, _localValuePairs, _localWirePointArrays);
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -213,15 +223,22 @@ namespace AGVManagement
         /// <summary>将所有路线 / Tag 颜色还原为默认黑色</summary>
         public void ResetLineColors()
         {
-            new MapInstrument().TagFormer();
-            foreach (var item in MapInstrument.wirePointArrays)
+            // 只操作本窗口局部集合，不碰全局静态集合
+            foreach (var kv in _localValuePairs)
+                kv.Value.Background = new SolidColorBrush(Color.FromRgb(80, 150, 255));
+
+            foreach (var item in _localWirePointArrays)
             {
                 if (item.GetPath != null)
                 {
                     item.GetPath.Stroke = Brushes.Black;
                     item.GetPath.StrokeThickness = 1;
                 }
-                item.Paths?.ForEach(p => { p.Stroke = Brushes.Black; p.StrokeThickness = 1; });
+                item.Paths?.ForEach(p =>
+                {
+                    p.Stroke = Brushes.Black;
+                    p.StrokeThickness = 1;
+                });
             }
         }
 
@@ -236,9 +253,12 @@ namespace AGVManagement
             string[] hooks = _dtRoute.Rows[index]["Hook"].ToString().Split(',');
             string[] stops = _dtRoute.Rows[index]["Stop"].ToString().Split(',');
             string[] programs = _dtRoute.Rows[index]["ChangeProgram"].ToString().Split(',');
+            string[] useQrs = _dtRoute.Rows[index].Table.Columns.Contains("UseQrCode")
+    ? _dtRoute.Rows[index]["UseQrCode"].ToString().Split(',')
+    : new string[tags.Length];
 
             var dt = new DataTable();
-            foreach (var col in new[] { "Tag", "Speed", "Pbs", "Turn", "Direction", "Hook", "Stop", "ChangeProgram" })
+            foreach (var col in new[] { "Tag", "Speed", "Pbs", "Turn", "Direction", "Hook", "Stop", "ChangeProgram", "UseQrCode" })
                 dt.Columns.Add(col);
 
             for (int i = 0; i < tags.Length; i++)
@@ -250,12 +270,14 @@ namespace AGVManagement
                     TagCompile.agvDire[Convert.ToInt32(dirs[i])],
                     TagCompile.agvHook[Convert.ToInt32(hooks[i])],
                     stops[i],
-                    programs[i]);
+                    programs[i],
+                    i < useQrs.Length ? useQrs[i] : "0");
 
-            if (tags.Length > 0)
+            // 滚动定位：用局部字典，不碰全局 valuePairs
+            if (tags.Length > 0 && _localValuePairs.TryGetValue(Convert.ToInt32(tags[0]), out var firstLabel))
             {
-                GetScroll.ScrollToHorizontalOffset(MapInstrument.valuePairs[Convert.ToInt32(tags[0])].Margin.Left - 600);
-                GetScroll.ScrollToVerticalOffset(MapInstrument.valuePairs[Convert.ToInt32(tags[0])].Margin.Top - 600);
+                GetScroll.ScrollToHorizontalOffset(firstLabel.Margin.Left - 600);
+                GetScroll.ScrollToVerticalOffset(firstLabel.Margin.Top - 600);
             }
 
             EditlineData.ItemsSource = dt.DefaultView;
@@ -263,8 +285,35 @@ namespace AGVManagement
             _manag.table = dt;
             _manag.tagType = true;
             _manag.TagCic();
+            
+
+            // 高亮信标：只操作局部字典
+            foreach (var tagStr in tags)
+                if (_localValuePairs.TryGetValue(Convert.ToInt32(tagStr), out var lbl))
+                    lbl.Background = Brushes.OrangeRed;
+
+            // 高亮线路：只操作局部集合
+            foreach (var wpa in _localWirePointArrays)
+            {
+                bool match = tags.Contains(wpa.GetPoint.TagID.ToString())
+                          && tags.Contains(wpa.GetWirePoint.TagID.ToString());
+                if (!match) continue;
+
+                if (wpa.GetPath != null)
+                {
+                    wpa.GetPath.Stroke = Brushes.OrangeRed;
+                    wpa.GetPath.StrokeThickness = 3;
+                }
+                wpa.Paths?.ForEach(p =>
+                {
+                    p.Stroke = Brushes.OrangeRed;
+                    p.StrokeThickness = 3;
+                });
+            }
+
             _manag.lineMap.TagClick(_times, Convert.ToInt32(dt.Rows[dt.Rows.Count - 1]["Tag"]),
-                EditlineData, dt, false);
+    EditlineData, dt, false,
+    _localValuePairs, _localWirePointArrays);
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -336,7 +385,7 @@ namespace AGVManagement
 
             // 拼接各字段字符串
             var sb = new Dictionary<string, StringBuilder>();
-            foreach (var k in new[] { "Tag", "Speed", "Stop", "Turn", "Dir", "Pbs", "Hook", "Program" })
+            foreach (var k in new[] { "Tag", "Speed", "Stop", "Turn", "Dir", "Pbs", "Hook", "Program", "UseQrCode" })
                 sb[k] = new StringBuilder();
 
             for (int i = 0; i < EditlineData.Items.Count; i++)
@@ -350,6 +399,9 @@ namespace AGVManagement
                 sb["Pbs"].Append(_tag.agvPbsIndex(row[2].ToString())); sb["Pbs"].Append(',');
                 sb["Hook"].Append(_tag.agvHookIndex(row[5].ToString())); sb["Hook"].Append(',');
                 sb["Program"].Append(row[7]); sb["Program"].Append(',');
+                sb["UseQrCode"].Append(row.Row.Table.Columns.Contains("UseQrCode")
+    ? row["UseQrCode"]?.ToString() ?? "0" : "0");
+                sb["UseQrCode"].Append(',');
             }
 
             // 去掉末尾逗号
@@ -368,16 +420,21 @@ namespace AGVManagement
                 if (_messageBLL.Program(ProgramNO.Text.Trim(), _times))
                 { MessageBox.Show("线路号已存在，请重新输入线路号"); return; }
 
-                bool ok = _messageBLL.InsertRouteMap(ProgramNO.Text.Trim(), ProgramName.Text.Trim(),
-                    UTC.ConvertDateTimeLong(DateTime.Now), _times,
-                    Tag, Speed, Stop, Turn, Dir, Pbs, Hook, agv, Program);
+                bool ok = _messageBLL.InsertRouteMap(
+    ProgramNO.Text.Trim(), ProgramName.Text.Trim(),
+    UTC.ConvertDateTimeLong(DateTime.Now), _times,
+    Tag, Speed, Stop, Turn, Dir, Pbs, Hook, agv, Program,
+    sb["UseQrCode"].ToString().TrimEnd(','));
                 MessageBox.Show(ok ? "保存成功" : "保存失败");
                 if (ok) Maplist_SelectionChanged(null, null);
             }
             else
             {
-                bool ok = _messageBLL.UpdateRouteMap(_times, Convert.ToInt32(ProgramNO.Text.Trim()),
-                    ProgramName.Text.Trim(), Tag, Speed, Stop, Turn, Dir, Pbs, Hook, agv, Program);
+                bool ok = _messageBLL.UpdateRouteMap(
+    _times, Convert.ToInt32(ProgramNO.Text.Trim()),
+    ProgramName.Text.Trim(),
+    Tag, Speed, Stop, Turn, Dir, Pbs, Hook, agv, Program,
+    sb["UseQrCode"].ToString().TrimEnd(','));
                 MessageBox.Show(ok ? "保存成功" : "保存失败");
                 if (ok) Maplist_SelectionChanged(null, null);
             }
@@ -444,6 +501,51 @@ namespace AGVManagement
                 List<NewPointStraightWithAngle> pts = PathHelper.ProcessPointsByTurnRotate(transformed, 0.001);
 
                 var stationData = new NewStationData();
+                //
+                string useQrRaw = _dtRoute.Rows[idx].Table.Columns.Contains("UseQrCode")
+    ? _dtRoute.Rows[idx]["UseQrCode"]?.ToString() ?? ""
+    : "";
+                string[] useQrFlags = string.IsNullOrEmpty(useQrRaw)
+                    ? new string[tags.Length]
+                    : useQrRaw.Split(',');
+
+                DataTable tagTblForQr = _tagInfo.RataTable(arr[2]);
+
+                // 只给 rotate=true 的真实点按顺序匹配二维码
+                // rotate=false 的插入点 qr_code 保持默认空字符串
+                int realPointIndex = 0;
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    if (pts[i].rotate)
+                    {
+                        // 真实站点
+                        bool enabled = realPointIndex < useQrFlags.Length
+                                    && useQrFlags[realPointIndex] == "1";
+                        if (enabled)
+                        {
+                            var qrRow = tagTblForQr.Select($"TagName = '{tags[realPointIndex]}'");
+                            pts[i].qr_code = qrRow.Length > 0
+                                ? qrRow[0]["QrCode"]?.ToString() ?? "" : "";
+                        }
+                           else
+                        {
+                            pts[i].qr_code = "";
+                        }
+
+                        // 回填 tag_id
+                        pts[i].tag_id = realPointIndex < tags.Length
+                            ? Convert.ToInt32(tags[realPointIndex]) : 0;
+
+                        realPointIndex++;
+                    }   
+                    else
+                    {
+                        // 插入点
+                        pts[i].qr_code = "";
+                        pts[i].tag_id = 0;  // 插入点无对应站点id
+                    }
+                }
+
                 stationData.Stations.AddRange(pts);
                 string json = JsonSerializer.Serialize(stationData, new JsonSerializerOptions { WriteIndented = true });
 
@@ -452,7 +554,7 @@ namespace AGVManagement
 
                 var client = MqttConnectionManager.LatestClient;
                 if (client == null || !client.IsConnected)
-                { MessageBox.Show("MQTT 客户端未连接，请先建立连接。"); return; }
+                { MessageBox.Show("MQTT 客户端未连接，请先建立连接。"); return; } 
 
                 var msg = new MqttApplicationMessageBuilder()
                     .WithTopic("AGV/Carrier/MapLine")
@@ -522,8 +624,8 @@ namespace AGVManagement
             foreach (DataRow row in input.Rows)
             {
                 double angleSpeed;
-                string angleInput = row["AngleSpeed"].ToString().Trim();
-                if (angleInput == "default") angleSpeed = 0.25;
+                string angleInput = row["AngleSpeed"].ToString().Trim();    
+                if (angleInput == "default") angleSpeed = 0.4;
                 else if (!double.TryParse(angleInput, out angleSpeed))
                     throw new ArgumentException($"无效的角速度输入值：'{angleInput}'");
 

@@ -30,10 +30,24 @@ namespace AGVManagement
         private LineMap lineMapMs;
         public long TimeMp;
 
+        private readonly TagInfoBLL _tagInfoBLL = new TagInfoBLL();
+        private string _currentQrCode = "";
+
         //新增弹窗单个逻辑
         private static TagLine _instance;  // 静态实例
 
-        public static void ShowWindow(List<object> list, long Time, bool type, int TagNum, DataGrid grid, int Indx, DataTable data, LineMap Mp)
+        private Dictionary<int, Label> _isolatedValuePairs;
+        private List<WirePointArray> _isolatedWirePointArrays;
+
+        private void UseQrCode_Checked(object sender, RoutedEventArgs e)
+    => QrCodeDisplay.Foreground = System.Windows.Media.Brushes.Black;
+
+        private void UseQrCode_Unchecked(object sender, RoutedEventArgs e)
+            => QrCodeDisplay.Foreground = System.Windows.Media.Brushes.Gray;
+
+
+        public static void ShowWindow(List<object> list, long Time, bool type, int TagNum, DataGrid grid, int Indx, DataTable data, LineMap Mp, Dictionary<int, Label> isolatedVP = null,
+    List<WirePointArray> isolatedWPA = null)
         {
             if (_instance == null || !_instance.IsLoaded)   // 没有窗口 或 已经关闭
             {
@@ -48,7 +62,8 @@ namespace AGVManagement
         }
 
 
-        public TagLine(List<object> list, long Time, bool type, int TagNum, DataGrid grid, int Indx, DataTable data, LineMap Mp)
+        public TagLine(List<object> list, long Time, bool type, int TagNum, DataGrid grid, int Indx, DataTable data, LineMap Mp, Dictionary<int, Label> isolatedVP = null,
+    List<WirePointArray> isolatedWPA = null)
         {
             InitializeComponent();
             Getgrid = grid;
@@ -57,6 +72,10 @@ namespace AGVManagement
             GetData = data;
             lineMapMs = Mp;
             TimeMp = Time;
+
+            _isolatedValuePairs = isolatedVP;
+            _isolatedWirePointArrays = isolatedWPA;
+
             LoadLineTag(list, Time, type, TagNum);
         }
 
@@ -79,12 +98,22 @@ namespace AGVManagement
             else
             {
                 List<string> ls = new List<string>();
-                foreach (int item in MapInstrument.valuePairs.Keys)
-                {
+
+                // 优先用隔离集合（Circuitredact 传进来的局部集合）
+                // 没有隔离集合时用全局静态集合（主窗口直接调用的情况）
+                var sourceDict = (_isolatedValuePairs != null && _isolatedValuePairs.Count > 0)
+                    ? _isolatedValuePairs
+                    : MapInstrument.valuePairs;
+
+                foreach (int item in sourceDict.Keys)
                     ls.Add(item.ToString());
-                }
+
                 TagNum.ItemsSource = ls;
-                TagNum.Text = lst[0].ToString();
+
+                string currentTag = lst[0].ToString().Trim();
+                TagNum.SelectedItem = ls.FirstOrDefault(x => x == currentTag);
+                if (TagNum.SelectedItem == null)
+                    TagNum.Text = currentTag;
             }
             speed.ItemsSource = TagCompile.agvSpeed;
             PBS.ItemsSource = TagCompile.agvPbs;
@@ -122,6 +151,36 @@ namespace AGVManagement
             else
                 ChangeProgram.Text = changeProgramValue;
 
+            // 读取当前信标的二维码ID
+            int currentTagId = 0;
+            try
+            {
+                // 优先从 lst[0] 读（TagLine 打开时传进来的当前行数据，第0列就是 Tag）
+                currentTagId = Convert.ToInt32(lst[0].ToString());
+            }
+            catch
+            {
+                currentTagId = TagUnm; // 读不到时兜底
+            }
+            _currentQrCode = _tagInfoBLL.GetQrCode(TimeMp.ToString(), currentTagId);
+            QrCodeDisplay.Text = string.IsNullOrEmpty(_currentQrCode)
+                ? "（未绑定二维码）" : _currentQrCode;
+
+            // DataTable 加 UseQrCode 列（如果还没有）
+            if (!GetData.Columns.Contains("UseQrCode"))
+                GetData.Columns.Add("UseQrCode", typeof(string));
+
+            // lst[9] 是 UseQrCode（Tag=0,Speed=1,Pbs=2,Turn=3,Direction=4,Hook=5,Stop=6,ChangeProgram=7,BatchSpeed=8,UseQrCode=9）
+            string existingUse = "0";
+            try
+            {
+                if (lst.Count > 9 && lst[9] != null)
+                    existingUse = lst[9].ToString();
+                else
+                    existingUse = ((DataRowView)Getgrid.Items[GrIndex])["UseQrCode"]?.ToString() ?? "0";
+            }
+            catch { existingUse = "0"; }
+            UseQrCode.IsChecked = existingUse == "1";
         }
 
 
@@ -132,58 +191,80 @@ namespace AGVManagement
         /// <param name="e"></param>
         private void Confirm_Click(object sender, RoutedEventArgs e)
         {
-            string batchSpeedText = BatchSpeed.SelectedValue?.ToString() ?? "default";
-
-            // ===== 批量速度处理 =====
-            if (!batchSpeedText.Equals("default", StringComparison.OrdinalIgnoreCase))
+            // ── 第一步：确定选中的 Tag 值，起点和非起点分开处理 ──────────────
+            string selectedTag;
+            if (taglis == null)
             {
-                // 批量修改线路下所有行的速度
-                foreach (DataRow row in GetData.Rows)
-                {
-                    row["Speed"] = batchSpeedText;
-                }
+                // 起点（typ=true）：SelectedItem 优先，Text 兜底
+                selectedTag = TagNum.SelectedItem?.ToString()
+                           ?? TagNum.Text?.Trim() ?? "";
             }
             else
             {
-                // 默认逻辑，只修改当前行速度
-                ((DataRowView)Getgrid.Items[GrIndex])["Speed"] = speed.SelectedValue.ToString();
+                // 非起点：SelectedValue 优先
+                selectedTag = TagNum.SelectedValue?.ToString()
+                           ?? TagNum.SelectedItem?.ToString()
+                           ?? TagNum.Text?.Trim() ?? "";
             }
 
-             // ===== 其他字段仍按原逻辑处理 =====
-            ((DataRowView)Getgrid.Items[GrIndex])["Pbs"] = PBS.SelectedValue.ToString();
-            ((DataRowView)Getgrid.Items[GrIndex])["Turn"] = Turn.SelectedValue.ToString();
-            ((DataRowView)Getgrid.Items[GrIndex])["Direction"] = Direction.SelectedValue.ToString();
-            ((DataRowView)Getgrid.Items[GrIndex])["Hook"] = Hook.SelectedValue.ToString();
-            ((DataRowView)Getgrid.Items[GrIndex])["Stop"] = Time.SelectedValue.ToString();
+            if (string.IsNullOrEmpty(selectedTag))
+            {
+                MessageBox.Show("请选择有效的信标", "提示",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-            // ChangeProgram 映射逻辑
+            // ── 第二步：确保 UseQrCode 列存在 ────────────────────────────────
+            if (!GetData.Columns.Contains("UseQrCode"))
+                GetData.Columns.Add("UseQrCode", typeof(string));
+
+            // ── 第三步：批量速度处理 ──────────────────────────────────────────
+            string batchSpeedText = BatchSpeed.SelectedValue?.ToString() ?? "default";
+            if (!batchSpeedText.Equals("default", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (DataRow row in GetData.Rows)
+                    row["Speed"] = batchSpeedText;
+            }
+            else
+            {
+                ((DataRowView)Getgrid.Items[GrIndex])["Speed"] =
+                    speed.SelectedValue?.ToString() ?? speed.Text;
+            }
+
+    // ── 第四步：其他字段写入 ──────────────────────────────────────────
+    ((DataRowView)Getgrid.Items[GrIndex])["Pbs"] = PBS.SelectedValue?.ToString() ?? PBS.Text;
+            ((DataRowView)Getgrid.Items[GrIndex])["Turn"] = Turn.SelectedValue?.ToString() ?? Turn.Text;
+            ((DataRowView)Getgrid.Items[GrIndex])["Direction"] = Direction.SelectedValue?.ToString() ?? Direction.Text;
+            ((DataRowView)Getgrid.Items[GrIndex])["Hook"] = Hook.SelectedValue?.ToString() ?? Hook.Text;
+            ((DataRowView)Getgrid.Items[GrIndex])["Stop"] = Time.SelectedValue?.ToString() ?? Time.Text;
+
             string changeProgramText = ChangeProgram.Text.Trim();
-            if (changeProgramText == "缺省")
-                changeProgramText = "default";
+            if (changeProgramText == "缺省") changeProgramText = "default";
             ((DataRowView)Getgrid.Items[GrIndex])["ChangeProgram"] = changeProgramText;
 
-            // 左/右转逻辑
-            if (Turn.SelectedValue.ToString().Equals("左转") || Turn.SelectedValue.ToString().Equals("右转"))
+            // ── 第五步：UseQrCode 写入 ────────────────────────────────────────
+            ((DataRowView)Getgrid.Items[GrIndex])["UseQrCode"] =
+                (UseQrCode.IsChecked == true && !string.IsNullOrEmpty(_currentQrCode)) ? "1" : "0";
+
+            // ── 第六步：左/右转联动 ───────────────────────────────────────────
+            if ((Turn.SelectedValue?.ToString() ?? "").Equals("左转") ||
+                (Turn.SelectedValue?.ToString() ?? "").Equals("右转"))
             {
                 if (GrIndex != Getgrid.Items.Count - 1)
-                {
                     ((DataRowView)Getgrid.Items[GrIndex + 1])["Turn"] = "取消转弯";
-                }
             }
 
-            // Tag 改动处理
-            if (((DataRowView)Getgrid.Items[GrIndex])["Tag"].ToString() != TagNum.SelectedValue.ToString())
+            // ── 第七步：Tag 改动处理 ──────────────────────────────────────────
+            string currentTag = ((DataRowView)Getgrid.Items[GrIndex])["Tag"].ToString();
+            if (currentTag != selectedTag)
             {
                 if (taglis != null)
                 {
-                    if (GrIndex != Getgrid.Items.Count)
+                    int a = Getgrid.Items.Count;
+                    for (int i = 0; i < a; i++)
                     {
-                        int a = Getgrid.Items.Count;
-                        for (int i = 0; i < a; i++)
-                        {
-                            if (i > GrIndex)
-                                GetData.Rows.Remove(GetData.Rows[GrIndex + 1]);
-                        }
+                        if (i > GrIndex)
+                            GetData.Rows.Remove(GetData.Rows[GrIndex + 1]);
                     }
                 }
                 else
@@ -196,15 +277,17 @@ namespace AGVManagement
                     }
                 }
 
-                ((DataRowView)Getgrid.Items[GrIndex])["Tag"] = TagNum.SelectedValue.ToString();
+                ((DataRowView)Getgrid.Items[GrIndex])["Tag"] = selectedTag;
                 Getgrid.ItemsSource = GetData.DefaultView;
                 Getgrid.AutoGenerateColumns = false;
                 LineRest();
                 lineMapMs.GetTags = null;
-                lineMapMs.TagClick(TimeMp, Convert.ToInt32(((DataRowView)Getgrid.Items[GrIndex])["Tag"]), Getgrid, GetData, false);
+                lineMapMs.TagClick(TimeMp, Convert.ToInt32(selectedTag),
+                    Getgrid, GetData, false,
+                    _isolatedValuePairs, _isolatedWirePointArrays);
             }
 
-            ((DataRowView)Getgrid.Items[GrIndex])["Tag"] = TagNum.SelectedValue.ToString();
+    ((DataRowView)Getgrid.Items[GrIndex])["Tag"] = selectedTag;
             Getgrid.SelectedIndex = GrIndex;
 
             this.Close();

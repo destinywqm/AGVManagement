@@ -30,5 +30,21 @@ namespace AGV.DAL
         {
             return MySqlHelper.ExecuteReader("select * from tag" + exls + " order by (TagName+0)");
         }
+
+        public string GetQrCode(string tableTime, int tagName)
+        {
+            object result = MySqlHelper.ExecuteScalar(
+                $"SELECT QrCode FROM tag{tableTime} WHERE TagName = {tagName}");
+            return result == null || result == DBNull.Value ? "" : result.ToString();
+        }
+
+        public bool UpdateQrCode(string tableTime, int tagName, string qrCode)
+        {
+            int rows = MySqlHelper.ExecuteNonQuery(
+                $"UPDATE tag{tableTime} SET QrCode = @qr WHERE TagName = @tag",
+                new MySqlParameter("@qr", qrCode),
+                new MySqlParameter("@tag", tagName));
+            return rows > 0;
+        }
     }
 }

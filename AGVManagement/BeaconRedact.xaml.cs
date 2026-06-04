@@ -26,6 +26,9 @@ namespace AGVManagement
     /// </summary>
     public partial class BeaconRedact : Window
     {
+        private readonly Dictionary<int, Label> _localValuePairs = new Dictionary<int, Label>();
+        private readonly List<WirePointArray> _localWirePointArrays = new List<WirePointArray>();
+
         MapManag manag = new MapManag();
         TagCompile tag = new TagCompile();
         OperateDBBLL operate = new OperateDBBLL();
@@ -42,11 +45,11 @@ namespace AGVManagement
         /// </summary>
         private void MapLoad()
         {
-            MapInstrument.keyValuePairs.Clear();
-            MapInstrument.valuePairs.Clear();
-            MapInstrument.wirePointArrays.Clear();
-            MapInstrument.GetKeyValues.Clear();
-            Painting.siseWin = 1;
+            //MapInstrument.keyValuePairs.Clear();
+            //MapInstrument.valuePairs.Clear();
+            //MapInstrument.wirePointArrays.Clear();
+            //MapInstrument.GetKeyValues.Clear();
+            //Painting.siseWin = 1;
             MapMessageBLL messageBLL = new MapMessageBLL();
             DataTable da = messageBLL.GetMapData(null);
             if (da == null)
@@ -168,11 +171,14 @@ namespace AGVManagement
         {
             if (!maplist.Text.Equals("请选择") && ((ComboBoxItem)maplist.SelectedItem).Tag!=null)
             {
-                MapInstrument.keyValuePairs.Clear();
-                MapInstrument.valuePairs.Clear();
-                MapInstrument.wirePointArrays.Clear();
-                MapInstrument.GetKeyValues.Clear();
-                Painting.siseWin = 1;
+                //MapInstrument.keyValuePairs.Clear();
+                //MapInstrument.valuePairs.Clear();
+                //MapInstrument.wirePointArrays.Clear();
+                //MapInstrument.GetKeyValues.Clear();
+                //Painting.siseWin = 1;
+                _localValuePairs.Clear();
+                _localWirePointArrays.Clear();
+
                 SliMax.Value = 0;
                 MapIN.Children.Clear();
                 string ls = ((ComboBoxItem)maplist.SelectedItem).Tag.ToString();
@@ -182,7 +188,7 @@ namespace AGVManagement
                 MapIN.Width = mpWidth;
                 MapIN.Height = mpHeight;
                 Times = long.Parse(arr[2]);
-                manag.SelectMap(long.Parse(arr[2]), MapIN,false);
+                manag.SelectMap(long.Parse(arr[2]), MapIN, false, _localValuePairs, _localWirePointArrays);
                 TagCompile tag = new TagCompile();
                 tag.TagManagement(Beacon, arr[2]);
             }

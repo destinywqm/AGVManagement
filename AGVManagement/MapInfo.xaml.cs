@@ -11,6 +11,7 @@ using AGV.BLL;
 using AGVManagement.instrument;
 using AGVManagement.MapPaint;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Threading;
@@ -22,6 +23,9 @@ namespace AGVManagement
 {
     public partial class Map : Window
     {
+        private readonly Dictionary<int, Label> _localValuePairs = new Dictionary<int, Label>();
+        private readonly List<WirePointArray> _localWirePointArrays = new List<WirePointArray>();
+
         // ── 字段 ──────────────────────────────────────────────────────────
         private readonly MapMessageBLL _mapBLL = new MapMessageBLL();
         private readonly MapManag _mapManag = new MapManag();
@@ -45,10 +49,10 @@ namespace AGVManagement
         private void LoadMapList(string filterName)
         {
             // 清空地图工具状态（防止上次编辑残留）
-            MapInstrument.keyValuePairs.Clear();
-            MapInstrument.valuePairs.Clear();
-            MapInstrument.wirePointArrays.Clear();
-            MapInstrument.GetKeyValues.Clear();
+            //MapInstrument.keyValuePairs.Clear();
+            //MapInstrument.valuePairs.Clear();
+            //MapInstrument.wirePointArrays.Clear();
+            //MapInstrument.GetKeyValues.Clear();
 
             var t = new Thread(() =>
             {
@@ -88,11 +92,14 @@ namespace AGVManagement
         {
             if (MapData.SelectedItems.Count == 0) return;
 
-            MapInstrument.keyValuePairs.Clear();
-            MapInstrument.valuePairs.Clear();
-            MapInstrument.wirePointArrays.Clear();
-            MapInstrument.GetKeyValues.Clear();
-            Painting.siseWin = 1;
+            //MapInstrument.keyValuePairs.Clear();
+            //MapInstrument.valuePairs.Clear();
+            //MapInstrument.wirePointArrays.Clear();
+            //MapInstrument.GetKeyValues.Clear();
+            //Painting.siseWin = 1;
+            _localValuePairs.Clear();
+            _localWirePointArrays.Clear();
+
             MapIN.Children.Clear();
 
             string[] parts = ((DataRowView)MapData.SelectedValue).Row.ItemArray[1]
@@ -107,7 +114,7 @@ namespace AGVManagement
             MapIN.Height = double.Parse(parts[2]) * _mapManag.Sise;
 
             _mapTime = long.Parse(UTC.ConvertDateTimeLong(Convert.ToDateTime(timeStr)).ToString());
-            _mapManag.SelectMap(_mapTime, MapIN, false);
+            _mapManag.SelectMap(_mapTime, MapIN, false, _localValuePairs, _localWirePointArrays);
         }
 
         // ─────────────────────────────────────────────────────────────────

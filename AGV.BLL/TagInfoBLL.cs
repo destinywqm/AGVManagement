@@ -21,5 +21,11 @@ namespace AGV.BLL
         {
             return tagInfoDAL.GetMapTags(exls);
         }
+
+        public string GetQrCode(string tableTime, int tagName)
+    => tagInfoDAL.GetQrCode(tableTime, tagName);
+
+        public bool UpdateQrCode(string tableTime, int tagName, string qrCode)
+            => tagInfoDAL.UpdateQrCode(tableTime, tagName, qrCode);
     }
 }

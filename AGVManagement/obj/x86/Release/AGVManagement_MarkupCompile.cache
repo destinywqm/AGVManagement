@@ -12,9 +12,9 @@ TRACE
 E:\AGVtest\AGV-master\AGVManagement\App.xaml
 38-990917325
 
-64271856022
+65706322117
 1451404268527
 AddCar.xaml;AddMap.xaml;AutoPath.xaml;BeaconRedact.xaml;CarEditorWindow.xaml;CarListWindow.xaml;Circuitredact.xaml;LineInputDialog.xaml;Main.xaml;MapInfo.xaml;MapRedact.xaml;MapWindow.xaml;mqtt.xaml;MqttConnect.xaml;Operation.xaml;PortSetting.xaml;RepositioningPage.xaml;RepositioningTag.xaml;Styles\BaseStyle.xaml;Styles\Bootstrap.xaml;Styles\Button.xaml;Styles\Colors.xaml;Styles\DataGrid.xaml;Styles\Fonts.xaml;Styles\FormControl.xaml;Styles\InputGroup.xaml;Styles\Label.xaml;Styles\Panel.xaml;Styles\Path.xaml;Styles\ProgressBar.xaml;Styles\Sizes.xaml;Styles\style.xaml;Styles\Window.xaml;TagLine.xaml;TagMessage.xaml;TagRedact.xaml;Test.xaml;TextRedact.xaml;
 
-False
+True
 

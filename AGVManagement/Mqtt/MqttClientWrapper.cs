@@ -203,6 +203,7 @@ namespace AGVManagement.Mqtt
                         new Point(ActualWidthNow, ActualHeightNow),
                         _length * ProportionNow,
                         _width * ProportionNow);
+                    Panel.SetZIndex(_car.Shape, int.MaxValue);
                     _mainPanel.Children.Add(_car.Shape);
                 });
             }

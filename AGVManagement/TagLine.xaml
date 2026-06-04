@@ -5,42 +5,69 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AGVManagement"
         mc:Ignorable="d"
-        Title="TagLine"  Height="518.927" Width="304.443"  WindowStartupLocation="CenterScreen" Topmost ="True" ResizeMode="NoResize" Icon="Images/笔.png">
+        Title="TagLine" Height="570" Width="304.443"
+        WindowStartupLocation="CenterScreen" Topmost="True"
+        ResizeMode="NoResize" Icon="Images/笔.png">
     <Grid Margin="10,10,10,20">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="70"></ColumnDefinition>
-            <ColumnDefinition></ColumnDefinition>
+            <ColumnDefinition Width="70"/>
+            <ColumnDefinition/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <!-- Row 9：新增二维码行 -->
+            <RowDefinition/>
+            <!-- Row 10：确认按钮 -->
         </Grid.RowDefinitions>
-        <Label Content="信标:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="0" Margin="0,0,10,0"></Label>
-        <ComboBox Grid.Column="1" Name="TagNum" Grid.Row="0"  HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0"></ComboBox>
-        <Label Content="速度:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="1" Margin="0,0,10,0"></Label>
-        <ComboBox Grid.Column="1" Grid.Row="1" Name="speed" HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0"></ComboBox>
-        <Label Content="PBS:" VerticalAlignment="Center"   HorizontalAlignment="Right" Grid.Column="0" Grid.Row="2" Margin="0,0,10,0"></Label>
-        <ComboBox Grid.Column="1" Grid.Row="2" Name="PBS" HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="PBS_SelectionChanged" ></ComboBox>
-        <Label Content="方向:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="3" Margin="0,0,10,0"></Label>
-        <ComboBox  Name="Turn"  Grid.Column="1" Grid.Row="3" HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Turn_SelectionChanged"></ComboBox>
-        <Label Content="避障:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="4" Margin="0,0,10,0"></Label>
-        <ComboBox Name="Direction" Grid.Column="1" Grid.Row="4" HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0"></ComboBox>
-        <Label Content="顶升:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="5" Margin="0,0,10,0"></Label>
-        <ComboBox Name="Hook" Grid.Column="1" Grid.Row="5" HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Hook_SelectionChanged"></ComboBox>
-        <Label Content="停止时间:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="6" Margin="0,0,10,0"></Label>
-        <ComboBox Name="Time" Grid.Column="1" Grid.Row="6" HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0"></ComboBox>
-        <Label Content="批量速度:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="7" Margin="0,0,10,0"></Label>
-        <ComboBox Name="BatchSpeed" Grid.Column="1" Grid.Row="7" HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" SelectedIndex="0"></ComboBox>
-        <Label Content="角速度:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="8" Margin="0,0,10,0"></Label>
-        <TextBox Name="ChangeProgram"  Grid.Column="1" Grid.Row="8"  HorizontalContentAlignment="Center"   VerticalContentAlignment="Center" Cursor="" Text="default" TextChanged="ChangeProgram_TextChanged"></TextBox>
-        <Button  Grid.Column="0" Name="Confirm"  Click="Confirm_Click"  Height="40" Grid.ColumnSpan="2" FontSize="20"  FontWeight="Black" Width="190" Content="确定" Grid.Row="13" Margin="10,10,-2,0"></Button>
+
+        <Label Content="信标:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="0" Margin="0,0,10,0"/>
+        <ComboBox Grid.Column="1" Name="TagNum" Grid.Row="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="TagNum_SelectionChanged"/>
+
+        <Label Content="速度:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="1" Margin="0,0,10,0"/>
+        <ComboBox Grid.Column="1" Grid.Row="1" Name="speed" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0"/>
+
+        <Label Content="PBS:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="2" Margin="0,0,10,0"/>
+        <ComboBox Grid.Column="1" Grid.Row="2" Name="PBS" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="PBS_SelectionChanged"/>
+
+        <Label Content="方向:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="3" Margin="0,0,10,0"/>
+        <ComboBox Name="Turn" Grid.Column="1" Grid.Row="3" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Turn_SelectionChanged"/>
+
+        <Label Content="避障:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="4" Margin="0,0,10,0"/>
+        <ComboBox Name="Direction" Grid.Column="1" Grid.Row="4" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Direction_SelectionChanged"/>
+
+        <Label Content="顶升:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="5" Margin="0,0,10,0"/>
+        <ComboBox Name="Hook" Grid.Column="1" Grid.Row="5" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Hook_SelectionChanged"/>
+
+        <Label Content="停止时间:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="6" Margin="0,0,10,0"/>
+        <ComboBox Name="Time" Grid.Column="1" Grid.Row="6" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Time_SelectionChanged"/>
+
+        <Label Content="批量速度:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="7" Margin="0,0,10,0"/>
+        <ComboBox Name="BatchSpeed" Grid.Column="1" Grid.Row="7" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" SelectedIndex="0"/>
+
+        <Label Content="角速度:" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="8" Margin="0,0,10,0"/>
+        <TextBox Name="ChangeProgram" Grid.Column="1" Grid.Row="8" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Text="default" TextChanged="ChangeProgram_TextChanged"/>
+
+        <!-- 新增：二维码行 -->
+        <CheckBox Name="UseQrCode" Content="启用二维码" Grid.Column="0" Grid.Row="9"
+                  VerticalAlignment="Center" HorizontalAlignment="Right"
+                  Margin="0,0,10,0"
+                  Checked="UseQrCode_Checked" Unchecked="UseQrCode_Unchecked"/>
+        <TextBlock Name="QrCodeDisplay" Grid.Column="1" Grid.Row="9"
+                   VerticalAlignment="Center" Foreground="Gray"
+                   Text="（未绑定二维码）" Margin="5,0,0,0"
+                   ToolTip="该信标绑定的二维码ID"/>
+
+        <Button Grid.Column="0" Name="Confirm" Click="Confirm_Click"
+                Height="40" Grid.ColumnSpan="2" FontSize="20" FontWeight="Black"
+                Width="190" Content="确定" Grid.Row="10" Margin="10,10,-2,0"/>
     </Grid>
 </Window>

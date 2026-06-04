@@ -83,9 +83,16 @@ namespace AGV.BLL
         /// <param name="Agv"></param>
         /// <param name="ChangeProgram"></param>
         /// <returns></returns>
-        public bool InsertRouteMap(string Program, string RouteName, long CreateTime, long MapTime, string Tag, string Speed, string Stop, string Turn, string Dire, string Pbs, string Hook, string Agv, string ChangeProgram)
+        //public bool InsertRouteMap(string Program, string RouteName, long CreateTime, long MapTime, string Tag, string Speed, string Stop, string Turn, string Dire, string Pbs, string Hook, string Agv, string ChangeProgram)
+        //{
+        //    return MapMessage.InsertRoute(Program, RouteName, CreateTime, MapTime, Tag, Speed, Stop, Turn, Dire, Pbs, Hook, Agv, ChangeProgram);
+        //}
+        public bool InsertRouteMap(string Program, string RouteName, long CreateTime, long MapTime,
+    string Tag, string Speed, string Stop, string Turn, string Dire,
+    string Pbs, string Hook, string Agv, string ChangeProgram, string UseQrCode = "")
         {
-            return MapMessage.InsertRoute(Program, RouteName, CreateTime, MapTime, Tag, Speed, Stop, Turn, Dire, Pbs, Hook, Agv, ChangeProgram);
+            return MapMessage.InsertRoute(Program, RouteName, CreateTime, MapTime,
+                Tag, Speed, Stop, Turn, Dire, Pbs, Hook, Agv, ChangeProgram, UseQrCode);
         }
 
         /// <summary>
@@ -104,11 +111,18 @@ namespace AGV.BLL
         /// <param name="AgvStr"></param>
         /// <param name="ProgramStr"></param>
         /// <param name="RouteTime"></param>
-        public bool UpdateRouteMap(long MapTime, int Program, string MapName, string TagStr, string SpeedStr, string StopStr, string TurnStr, string DireStr, string PbsStr, string HookStr, string AgvStr, string ProgramStr)
+        //public bool UpdateRouteMap(long MapTime, int Program, string MapName, string TagStr, string SpeedStr, string StopStr, string TurnStr, string DireStr, string PbsStr, string HookStr, string AgvStr, string ProgramStr)
+        //{
+        //    return MapMessage.UpdateRoute(MapTime, Program, MapName, TagStr, SpeedStr, StopStr, TurnStr, DireStr, PbsStr, HookStr, AgvStr, ProgramStr);
+        //}
+        public bool UpdateRouteMap(long MapTime, int Program, string MapName,
+    string TagStr, string SpeedStr, string StopStr, string TurnStr, string DireStr,
+    string PbsStr, string HookStr, string AgvStr, string ProgramStr, string UseQrCode = "")
         {
-            return MapMessage.UpdateRoute(MapTime, Program, MapName, TagStr, SpeedStr, StopStr, TurnStr, DireStr, PbsStr, HookStr, AgvStr, ProgramStr);
+            return MapMessage.UpdateRoute(MapTime, Program, MapName,
+                TagStr, SpeedStr, StopStr, TurnStr, DireStr,
+                PbsStr, HookStr, AgvStr, ProgramStr, UseQrCode);
         }
-
         /// <summary>
         /// 判断线路号是否存在
         /// </summary>

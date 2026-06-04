@@ -1,0 +1,1 @@
+INSERT INTO agv.`tag1779959298` (`TagNo`,`TagName`,`X`,`Y`,`NextTag`,`NextLeftTag`,`NextRightTag`,`PreTag`,`PreLeftTag`,`PreRightTag`,`Speed`,`SpeedRev`,`StopTime`,`Pbs`,`PbsRev`,`TagTerminal`,`QrCode`) VALUES ('TA2','2',122.009348274973,47.35,0,0,0,0,0,0,'');

@@ -20,53 +20,70 @@ namespace AGVManagement.MapPaint
 
         /// <summary>
         /// 查找关联Tag
+        /// externalValuePairs / externalWirePointArrays 不为 null 时使用外部局部集合（Circuitredact用），
+        /// 为 null 时使用全局静态集合（主窗口编辑用）
         /// </summary>
-        /// <param name="Time"></param>
-        /// <param name="TagNu"></param>
-        public void TagClick(long Time, int TagNu,DataGrid grid,DataTable dt,bool type)
+        public void TagClick(long Time, int TagNu, DataGrid grid, DataTable dt, bool type,
+            Dictionary<int, Label> externalValuePairs = null,
+            List<WirePointArray> externalWirePointArrays = null)
         {
             bool exists = false;
-            if (GetTags!=null)
+            if (GetTags != null)
             {
                 foreach (string item in GetTags)
                 {
-                    if (!item.Equals("N/A"))//排除第一个空值(N/A)
+                    if (!item.Equals("N/A"))
                     {
                         if (Convert.ToInt32(item).Equals(TagNu))
-                        {
                             exists = true;
-                        }
                     }
                 }
             }
-            if (exists|| GetTags==null)
+            if (exists || GetTags == null)
             {
-                map.TagFormer();//所有Tag还原为原色
+                // 只有用全局集合时才调 TagFormer（否则会改主窗口颜色）
+                if (externalValuePairs == null)
+                    map.TagFormer();
+
                 OperateDBBLL operate = new OperateDBBLL();
-                string[] taglis = operate.SelectTagArr(Time, TagNu.ToString());//查询关联Tag
+                string[] taglis = operate.SelectTagArr(Time, TagNu.ToString());
                 GetTags = taglis;
-                AddTagInfo(grid, dt, TagNu, taglis, type);
+                AddTagInfo(grid, dt, TagNu, taglis, type,
+                    externalValuePairs, externalWirePointArrays);
             }
         }
-       
+
         /// <summary>
         /// 添加Tag信息
+        /// externalValuePairs / externalWirePointArrays 不为 null 时只操作局部集合
         /// </summary>
-        public void AddTagInfo(DataGrid gid,DataTable table,int TagNu, string[] taglis,bool type)
+        public void AddTagInfo(DataGrid gid, DataTable table, int TagNu, string[] taglis, bool type,
+            Dictionary<int, Label> externalValuePairs = null,
+            List<WirePointArray> externalWirePointArrays = null)
         {
+            // 决定用哪个集合
+            var vp = externalValuePairs ?? MapInstrument.valuePairs;
+            var wpa = externalWirePointArrays ?? MapInstrument.wirePointArrays;
+
             if (type)
             {
-                table.Rows.Add(new object[] { TagNu, TagCompile.agvSpeed[10], TagCompile.agvPbs[16], TagCompile.agvTurn[0], TagCompile.agvDire[2], TagCompile.agvHook[4], TagCompile.agvTime[0], "default" });
+                table.Rows.Add(new object[] { TagNu, TagCompile.agvSpeed[10], TagCompile.agvPbs[16],
+                TagCompile.agvTurn[0], TagCompile.agvDire[2], TagCompile.agvHook[4],
+                TagCompile.agvTime[0], "default" });
             }
             gid.ItemsSource = table.DefaultView;
             gid.AutoGenerateColumns = false;
+
             for (int i = 0; i < gid.Items.Count; i++)
             {
-                foreach (WirePointArray item in MapInstrument.wirePointArrays)
+                foreach (WirePointArray item in wpa)  // ← 用局部或全局集合
                 {
                     if (i < gid.Items.Count - 1)
                     {
-                        if ((item.GetPoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i])[0])) && item.GetWirePoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i+1])[0]))) || (item.GetPoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i+1])[0]))) && item.GetWirePoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i])[0])))
+                        if ((item.GetPoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i])[0]))
+                            && item.GetWirePoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i + 1])[0])))
+                            || (item.GetPoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i + 1])[0]))
+                            && item.GetWirePoint.TagID.Equals(Convert.ToInt32(((DataRowView)gid.Items[i])[0]))))
                         {
                             Path path = item.GetPath;
                             if (path != null)
@@ -85,43 +102,37 @@ namespace AGVManagement.MapPaint
                                     ph.StrokeThickness = 10;
                                     item.Paths[s] = ph;
                                 }
-                                Point startPt =new Point() { X = MapInstrument.valuePairs[Convert.ToInt32(Convert.ToInt32(((DataRowView)gid.Items[i])[0]))].Margin.Left-19, Y= MapInstrument.valuePairs[Convert.ToInt32(Convert.ToInt32(((DataRowView)gid.Items[i])[0]))].Margin.Left - 11.5 };
-                                Point endPt = new Point() { X = MapInstrument.valuePairs[Convert.ToInt32(Convert.ToInt32(((DataRowView)gid.Items[i+1])[0]))].Margin.Left - 19, Y = MapInstrument.valuePairs[Convert.ToInt32(Convert.ToInt32(((DataRowView)gid.Items[i+1])[0]))].Margin.Left - 11.5 };
-                                double drn = startPt.X - endPt.X;
-                                double hrn = startPt.Y - endPt.Y;
-
-
-                                //if (drn < 0 && hrn>0)
-                                //{
-                                //    ((DataRowView)gid.Items[i])["Turn"] = "左转";
-                                //}
-                                //else if (drn < 0 && hrn>0)
-                                //{
-                                //    ((DataRowView)gid.Items[i])["Turn"] = "右转";
-                                //}
-
+                                // 只有 vp 里有对应 key 才访问，防止 KeyNotFoundException
+                                int tagI = Convert.ToInt32(((DataRowView)gid.Items[i])[0]);
+                                int tagI1 = Convert.ToInt32(((DataRowView)gid.Items[i + 1])[0]);
+                                if (vp.ContainsKey(tagI) && vp.ContainsKey(tagI1))
+                                {
+                                    Point startPt = new Point { X = vp[tagI].Margin.Left - 19, Y = vp[tagI].Margin.Top - 11.5 };
+                                    Point endPt = new Point { X = vp[tagI1].Margin.Left - 19, Y = vp[tagI1].Margin.Top - 11.5 };
+                                }
                             }
                         }
                     }
                 }
-                MapInstrument.valuePairs[Convert.ToInt32(Convert.ToInt32(((DataRowView)gid.Items[i])[0]))].Background = new SolidColorBrush(Colors.Purple);//线路Tag标记为紫色
+
+                // 安全访问：key 不存在时跳过，不崩溃
+                int tagIdx = Convert.ToInt32(((DataRowView)gid.Items[i])[0]);
+                if (vp.ContainsKey(tagIdx))
+                    vp[tagIdx].Background = new SolidColorBrush(Colors.Purple);
             }
 
-            MapInstrument.valuePairs[TagNu].Background = new SolidColorBrush(Colors.Red);//选中Tag标记为红色
-            for (int i = 0; i < taglis.Length; i++)//关联Tag标记绿色
-            {
-                if (!i.Equals(0))//排除第一个空值(N/A)
-                {
-                    MapInstrument.valuePairs[Convert.ToInt32(taglis[i].ToString())].Background = new SolidColorBrush(Colors.Green);//关联Tag标记为绿色
+            if (vp.ContainsKey(TagNu))
+                vp[TagNu].Background = new SolidColorBrush(Colors.Red);
 
+            for (int i = 0; i < taglis.Length; i++)
+            {
+                if (!i.Equals(0))
+                {
+                    int tid = Convert.ToInt32(taglis[i]);
+                    if (vp.ContainsKey(tid))
+                        vp[tid].Background = new SolidColorBrush(Colors.Green);
                 }
             }
         }
-
-
-
-
-
-
     }
 }

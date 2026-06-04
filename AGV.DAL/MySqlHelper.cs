@@ -213,9 +213,10 @@ namespace AGV.DAL
                     tx.Commit();
                     return true;
                 }
-                catch (Exception )
+                catch (Exception ex)
                 {
                     tx.Rollback();
+                    MessageBox.Show("保存失败SQL错误：" + ex.Message);
                     return false;
                 }
             }

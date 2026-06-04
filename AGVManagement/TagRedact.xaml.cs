@@ -42,7 +42,7 @@ namespace AGVManagement
         public static Dictionary<int, int> TagToVSpide = new Dictionary<int, int>();
         public static Dictionary<int, int> TagToASpide = new Dictionary<int, int>();
 
-
+        private readonly TagInfoBLL _tagInfoBLL = new TagInfoBLL();
         public TagRedact(int TagID, Canvas canvas)
         {
             InitializeComponent();
@@ -66,9 +66,9 @@ namespace AGVManagement
             Point logicPos = mapInstrument.GetTagLogicPosition(TagIndex);
 
             TagX.Text = logicPos.X.ToString();
-            TagY.Text = logicPos.Y.ToString();  
+            TagY.Text = logicPos.Y.ToString();
 
-
+            QrCodeBox.Text = _tagInfoBLL.GetQrCode(MainWindow.Time.ToString(), TagIndex);
 
             /*DataTable TagStation = tagInfoBLL.RataTable(MainWindow.Time.ToString());
             DataRow tagRow = TagStation.AsEnumerable()
@@ -200,6 +200,7 @@ namespace AGVManagement
             mapInstrument.UpdateTagLogicPosition(Convert.ToInt32(TagIndex), new Point(logicX, logicY));
             label.Margin = new Thickness(Convert.ToDouble(TagX.Text.Trim()) * Painting.siseWin, Convert.ToDouble(TagY.Text.Trim()) * Painting.siseWin, 0, 0);
             GetMovement(new Point() { X = logicX + 19, Y = logicY + 11.5 }, TagIndex);
+            _tagInfoBLL.UpdateQrCode(MainWindow.Time.ToString(), TagIndex, QrCodeBox.Text.Trim());
             //AddOrUpdateTagRotate(TagIndex, TagRotate.Text);
             //AddOrUpdateTagToVSpide(TagIndex, v_desired.Text);
             //AddOrUpdateTagToASpide(TagIndex, a_desired.Text);

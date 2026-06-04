@@ -42,26 +42,26 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGV.BLL.dll" size="10752">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGV.BLL.dll" size="11264">
       <assemblyIdentity name="AGV.BLL" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>zFC5NgL/T2meOB6FJ4I2wzEFuLX5jMskfGDlq2YgukA=</dsig:DigestValue>
+        <dsig:DigestValue>qfDcG4m0qsJ0XCYKCSHUeAm2fbqY+x9r5Z4Y78yrmKY=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGV.DAL.dll" size="30208">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGV.DAL.dll" size="30720">
       <assemblyIdentity name="AGV.DAL" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>imWN5GM7UE2VcKTlE8FHd3+I0WMzOUy9eMXKNKKGI8s=</dsig:DigestValue>
+        <dsig:DigestValue>fdYV7T8bjEU6vsi2CjdktqKiHIP8kUnNZf/6IBl5dJU=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -90,14 +90,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGVManagement.exe" size="969728">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AGVManagement.exe" size="975360">
       <assemblyIdentity name="AGVManagement" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>BLqWs84fN4Jp9xunAxBAGLBYQbQ6z5xkPuDiDIbeFVI=</dsig:DigestValue>
+        <dsig:DigestValue>jYrrGxcN0Uen9WPpnWv7QgNy6WcHzw/ZH0fSw9rXAsA=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

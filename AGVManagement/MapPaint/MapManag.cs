@@ -36,18 +36,23 @@ namespace AGVManagement.MapPaint
         public static List<WirePointArray> MainwirePoint = new List<WirePointArray>();//Main路线集合
         public static Dictionary<int, Label> MainvaluePairs = new Dictionary<int, Label>();//Main信标集合
 
-
+        // 外部注入的局部集合（Circuitredact 使用），为 null 时走全局静态集合
+        public Dictionary<int, Label> IsolatedValuePairs = null;
+        public List<WirePointArray> IsolatedWirePointArrays = null;
         /// <summary>
         /// 载入地图数据
         /// </summary>
         /// <param name="Times"></param>
         /// <param name="MapIN"></param>
-        public void SelectMap(long Times, Canvas MapIN, bool type)
+        public void SelectMap(long Times, Canvas MapIN, bool type,
+    Dictionary<int, Label> isolatedValuePairs = null,
+    List<WirePointArray> isolatedWirePointArrays = null)
         {
+            bool isolated = isolatedValuePairs != null && isolatedWirePointArrays != null;
+
             if (ther != true || theg != true || thms != true)
-            {
                 return;
-            }
+
             Thread thread = new Thread(() =>
             {
                 lock (_locker)
@@ -58,11 +63,19 @@ namespace AGVManagement.MapPaint
                     {
                         MapIN.Dispatcher.BeginInvoke(new Action<DataRow>(S =>
                         {
-                            Label label = TagCreate(new Point() { X = (Convert.ToDouble(S["X"].ToString()) * Sise) - 19, Y = (Convert.ToDouble(S["Y"].ToString()) * Sise) - 11.5 }, Convert.ToInt32(S["TagName"].ToString()),false);
-                            if (type)//编辑地图线路添加单击事件，否则不需要
-                            {
+                            Label label = TagCreate(
+                                new Point()
+                                {
+                                    X = (Convert.ToDouble(S["X"].ToString()) * Sise) - 19,
+                                    Y = (Convert.ToDouble(S["Y"].ToString()) * Sise) - 11.5
+                                },
+                                Convert.ToInt32(S["TagName"].ToString()),
+                                false,
+                                isolated ? isolatedValuePairs : null);  // ← 隔离模式写局部字典
+
+                            if (type)
                                 label.MouseDown += Label_MouseDown;
-                            }
+
                             MapIN.Children.Add(label);
                         }), item);
                     }
@@ -83,20 +96,32 @@ namespace AGVManagement.MapPaint
                         MapIN.Dispatcher.BeginInvoke(new Action(() =>
                         {
                             if (Convert.ToInt32(data["LineStyel"].ToString()) == 1)
-                            {
-                                GetCircuitType = (CircuitType.Line);
-                            }
+                                GetCircuitType = CircuitType.Line;
                             else if (Convert.ToInt32(data["LineStyel"].ToString()) == 2)
-                            {
-                                GetCircuitType = (CircuitType.Broken);
-                            }
+                                GetCircuitType = CircuitType.Broken;
                             else if (Convert.ToInt32(data["LineStyel"].ToString()) == 3)
+                                GetCircuitType = CircuitType.Semicircle;
+
+                            Pairsarray.Add(new WirePoint()
                             {
-                                GetCircuitType = (CircuitType.Semicircle);
-                            }
-                            Pairsarray.Add(new WirePoint() { TagID = Convert.ToInt32(data["Tag1"].ToString().Substring(2)), SetPoint = new Point() { X = Convert.ToDouble(data["StartX"].ToString()) * Sise, Y = Convert.ToDouble(data["StartY"].ToString()) * Sise } });
-                            Pairsarray.Add(new WirePoint() { TagID = Convert.ToInt32(data["Tag2"].ToString().Substring(2)), SetPoint = new Point() { X = Convert.ToDouble(data["EndX"].ToString()) * Sise, Y = Convert.ToDouble(data["EndY"].ToString()) * Sise } });
-                            AddLine(MapIN,false);
+                                TagID = Convert.ToInt32(data["Tag1"].ToString().Substring(2)),
+                                SetPoint = new Point()
+                                {
+                                    X = Convert.ToDouble(data["StartX"].ToString()) * Sise,
+                                    Y = Convert.ToDouble(data["StartY"].ToString()) * Sise
+                                }
+                            });
+                            Pairsarray.Add(new WirePoint()
+                            {
+                                TagID = Convert.ToInt32(data["Tag2"].ToString().Substring(2)),
+                                SetPoint = new Point()
+                                {
+                                    X = Convert.ToDouble(data["EndX"].ToString()) * Sise,
+                                    Y = Convert.ToDouble(data["EndY"].ToString()) * Sise
+                                }
+                            });
+
+                            AddLine(MapIN, false, isolated ? isolatedWirePointArrays : null);  // ← 隔离模式写局部集合
                             Pairsarray.Clear();
                         }));
                     }
@@ -118,11 +143,36 @@ namespace AGVManagement.MapPaint
                         {
                             if (table["WidgetNo"].ToString().Substring(0, 2).Equals("AR"))
                             {
-                                MapIN.Children.Add(NewArea(new Point() { X = (Convert.ToDouble(table["X"].ToString()) * Sise), Y = (Convert.ToDouble(table["Y"].ToString()) * Sise) }, table["Name"].ToString(), Convert.ToInt32(table["WidgetNo"].ToString().Substring(2)), table["BackColor"].ToString(), table["ForeColor"].ToString(), table["BorderColor"].ToString(), Convert.ToDouble(table["FontSize"].ToString()), Convert.ToDouble(table["Width"].ToString()), Convert.ToDouble(table["Height"].ToString()), table["FontPosition"].ToString()));
+                                MapIN.Children.Add(NewArea(
+                                    new Point()
+                                    {
+                                        X = Convert.ToDouble(table["X"].ToString()) * Sise,
+                                        Y = Convert.ToDouble(table["Y"].ToString()) * Sise
+                                    },
+                                    table["Name"].ToString(),
+                                    Convert.ToInt32(table["WidgetNo"].ToString().Substring(2)),
+                                    table["BackColor"].ToString(),
+                                    table["ForeColor"].ToString(),
+                                    table["BorderColor"].ToString(),
+                                    Convert.ToDouble(table["FontSize"].ToString()),
+                                    Convert.ToDouble(table["Width"].ToString()),
+                                    Convert.ToDouble(table["Height"].ToString()),
+                                    table["FontPosition"].ToString(),
+                                    isolated));  // ← 隔离模式不写静态集合
                             }
                             else
                             {
-                                MapIN.Children.Add(FontTextNew(new Point() { X = (Convert.ToDouble(table["X"].ToString()) * Sise), Y = (Convert.ToDouble(table["Y"].ToString()) * Sise) }, table["Name"].ToString(), Convert.ToInt32(table["WidgetNo"].ToString().Substring(2)), Convert.ToDouble(table["FontSize"].ToString()), table["ForeColor"].ToString()));
+                                MapIN.Children.Add(FontTextNew(
+                                    new Point()
+                                    {
+                                        X = Convert.ToDouble(table["X"].ToString()) * Sise,
+                                        Y = Convert.ToDouble(table["Y"].ToString()) * Sise
+                                    },
+                                    table["Name"].ToString(),
+                                    Convert.ToInt32(table["WidgetNo"].ToString().Substring(2)),
+                                    Convert.ToDouble(table["FontSize"].ToString()),
+                                    table["ForeColor"].ToString(),
+                                    isolated));  // ← 隔离模式不写静态集合
                             }
                         }), tables);
                     }
@@ -221,14 +271,17 @@ namespace AGVManagement.MapPaint
         /// <param name="MpHeight"></param>
         /// <param name="FontPosition"></param>
         /// <returns></returns>
-        public Label NewArea(Point point, string Text, int ArID, string bgColor, string FontColor, string BrColor, double FontSise, double MpWidth, double MpHeight, string FontPosition)
+        public Label NewArea(Point point, string Text, int ArID,
+    string bgColor, string FontColor, string BrColor,
+    double FontSise, double MpWidth, double MpHeight,
+    string FontPosition, bool isolated = false)
         {
             Label labelArea = new Label()
             {
                 Content = Text,
-                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + bgColor + "")),
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + FontColor + "")),
-                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + BrColor + "")),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + bgColor)),
+                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + FontColor)),
+                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + BrColor)),
                 BorderThickness = new Thickness(2, 2, 2, 2),
                 FontSize = (FontSise / 10) * Sise,
                 Width = MpWidth * Sise,
@@ -238,7 +291,10 @@ namespace AGVManagement.MapPaint
                 Tag = ArID,
             };
             area.aAlignment(FontPosition, labelArea);
-            MapInstrument.keyValuePairs.Add(ArID, labelArea);
+
+            if (!isolated)
+                MapInstrument.keyValuePairs.Add(ArID, labelArea);  // 只有主窗口写全局
+
             return labelArea;
         }
 
@@ -251,12 +307,13 @@ namespace AGVManagement.MapPaint
         /// <param name="FontSise"></param>
         /// <param name="fontColor"></param>
         /// <returns></returns>
-        public Label FontTextNew(Point point, string Text, int TextInx, double FontSise, string fontColor)
+        public Label FontTextNew(Point point, string Text, int TextInx,
+    double FontSise, string fontColor, bool isolated = false)
         {
             Label labelText = new Label()
             {
                 Content = Text,
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + fontColor + "")),
+                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#" + fontColor)),
                 FontSize = FontSise * 2,
                 Margin = new Thickness(point.X, point.Y, 0, 0),
                 HorizontalContentAlignment = HorizontalAlignment.Center,
@@ -264,7 +321,10 @@ namespace AGVManagement.MapPaint
                 Cursor = Cursors.Hand,
                 Tag = TextInx,
             };
-            MapInstrument.GetKeyValues.Add(TextInx, labelText);
+
+            if (!isolated)
+                MapInstrument.GetKeyValues.Add(TextInx, labelText);  // 只有主窗口写全局
+
             return labelText;
         }
 
@@ -272,48 +332,73 @@ namespace AGVManagement.MapPaint
         /// 生成线路
         /// </summary>
         /// <param name="MapIN"></param>
-        public void AddLine(Canvas MapIN,bool type)
+        public void AddLine(Canvas MapIN, bool type,
+    List<WirePointArray> isolatedList = null)
         {
-            if (GetCircuitType.Equals(CircuitType.Line))//绘制直线
+            WirePointArray wpa = null;
+
+            if (GetCircuitType.Equals(CircuitType.Line))
             {
-                Path path = painting.DrawingLine(Pairsarray[0].SetPoint, Pairsarray[1].SetPoint, MapIN);//绘制直线
-                MapInstrument.wirePointArrays.Add(new WirePointArray() { circuitType = CircuitType.Line, GetPath = path, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                if (type)
+                Path path = painting.DrawingLine(Pairsarray[0].SetPoint, Pairsarray[1].SetPoint, MapIN);
+                wpa = new WirePointArray()
                 {
-                    MainwirePoint.Add(new WirePointArray() { circuitType = CircuitType.Line, GetPath = path, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                }
+                    circuitType = CircuitType.Line,
+                    GetPath = path,
+                    GetPoint = Pairsarray[0],
+                    GetWirePoint = Pairsarray[1]
+                };
             }
             else if (GetCircuitType.Equals(CircuitType.Semicircle))
             {
-                Path path = painting.DrawingSemicircle(Pairsarray[0].SetPoint, Pairsarray[1].SetPoint, MapIN);//绘制半圆
-                MapInstrument.wirePointArrays.Add(new WirePointArray() { circuitType = CircuitType.Semicircle, GetPath = path, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                if (type)
+                Path path = painting.DrawingSemicircle(Pairsarray[0].SetPoint, Pairsarray[1].SetPoint, MapIN);
+                wpa = new WirePointArray()
                 {
-                    MainwirePoint.Add(new WirePointArray() { circuitType = CircuitType.Semicircle, GetPath = path, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                }
+                    circuitType = CircuitType.Semicircle,
+                    GetPath = path,
+                    GetPoint = Pairsarray[0],
+                    GetWirePoint = Pairsarray[1]
+                };
             }
             else if (GetCircuitType.Equals(CircuitType.QuadraticBezierCurve))
             {
-                //Point controlPt = new Point();
-                Path path = painting.DrawingQuadraticBezierCurve(Pairsarray[0].SetPoint, Pairsarray[1].SetPoint, MapIN);//绘制半圆
-                MapInstrument.wirePointArrays.Add(new WirePointArray() { circuitType = CircuitType.Semicircle, GetPath = path, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                if (type)
+                Path path = painting.DrawingQuadraticBezierCurve(Pairsarray[0].SetPoint, Pairsarray[1].SetPoint, MapIN);
+                wpa = new WirePointArray()
                 {
-                    MainwirePoint.Add(new WirePointArray() { circuitType = CircuitType.Semicircle, GetPath = path, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                }
+                    circuitType = CircuitType.Semicircle,
+                    GetPath = path,
+                    GetPoint = Pairsarray[0],
+                    GetWirePoint = Pairsarray[1]
+                };
             }
-            else if (GetCircuitType.Equals(CircuitType.Broken))//折线
+            else if (GetCircuitType.Equals(CircuitType.Broken))
             {
                 List<Path> Pathr = painting.DrawingBroken(Pairsarray[0].SetPoint, Pairsarray[1].SetPoint, MapIN);
-                MapInstrument.wirePointArrays.Add(new WirePointArray() { circuitType = CircuitType.Broken, Paths = Pathr, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                if (type)
+                wpa = new WirePointArray()
                 {
-                    MainwirePoint.Add(new WirePointArray() { circuitType = CircuitType.Broken, Paths = Pathr, GetPoint = Pairsarray[0], GetWirePoint = Pairsarray[1] });
-                }
+                    circuitType = CircuitType.Broken,
+                    Paths = Pathr,
+                    GetPoint = Pairsarray[0],
+                    GetWirePoint = Pairsarray[1]
+                };
+            }
+
+            if (wpa == null) return;
+
+            if (isolatedList != null)
+            {
+                // 隔离模式：只写局部集合，不碰全局静态字段
+                isolatedList.Add(wpa);
+            }
+            else
+            {
+                // 主窗口模式：写全局集合
+                MapInstrument.wirePointArrays.Add(wpa);
+                if (type)
+                    MainwirePoint.Add(wpa);
             }
         }
 
-        
+
 
         /// <summary>
         /// 生成Tag
@@ -321,7 +406,8 @@ namespace AGVManagement.MapPaint
         /// <param name="point"></param>
         /// <param name="TagID"></param>    
         /// <returns></returns>
-        private Label TagCreate(Point point, int TagID,bool type)
+        private Label TagCreate(Point point, int TagID, bool type,
+    Dictionary<int, Label> isolatedDict = null)
         {
             Label labelStrn = new Label()
             {
@@ -337,11 +423,20 @@ namespace AGVManagement.MapPaint
                 Tag = TagID
             };
             Canvas.SetZIndex(labelStrn, 999999);
-            MapInstrument.valuePairs.Add(TagID, labelStrn);
-            if (type)
+
+            if (isolatedDict != null)
             {
-                MainvaluePairs.Add(TagID, labelStrn);
+                // 隔离模式：只写局部字典
+                isolatedDict[TagID] = labelStrn;
             }
+            else
+            {
+                // 主窗口模式：写全局集合
+                MapInstrument.valuePairs.Add(TagID, labelStrn);
+                if (type)
+                    MainvaluePairs.Add(TagID, labelStrn);
+            }
+
             return labelStrn;
         }
 
@@ -372,7 +467,8 @@ namespace AGVManagement.MapPaint
                 Label tmp = (Label)sender;
                 if (e.LeftButton == MouseButtonState.Pressed)
                 {
-                    lineMap.TagClick(Times, Convert.ToInt32(tmp.Tag), GetData, table, true);
+                    lineMap.TagClick(Times, Convert.ToInt32(tmp.Tag), GetData, table, true,
+    IsolatedValuePairs, IsolatedWirePointArrays);
                 }
                 else if (e.RightButton == MouseButtonState.Pressed)
                 {
@@ -412,9 +508,8 @@ namespace AGVManagement.MapPaint
 
         public void LineMapShow(List<object> list, bool type, int TagUnm, int Index)
         {
-            TagLine.ShowWindow(list, Times, type, TagUnm, GetData, Index, table, lineMap);
-            /*TagLine tag = new TagLine(list, Times, type, TagUnm, GetData, Index, table, lineMap);
-            tag.Show();*/
+            TagLine.ShowWindow(list, Times, type, TagUnm, GetData, Index, table, lineMap,
+                IsolatedValuePairs, IsolatedWirePointArrays);
         }
 
 
